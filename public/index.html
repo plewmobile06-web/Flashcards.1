@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>AI Quiz Game</title>
+
+<style>
+body{
+  font-family: Arial;
+  text-align:center;
+  background:#f5f5f5;
+}
+
+img{
+  width:300px;
+  height:300px;
+  object-fit:contain;
+  margin:20px;
+}
+
+button{
+  padding:10px 20px;
+  margin:10px;
+  font-size:18px;
+  cursor:pointer;
+}
+
+#options{
+  margin-top:20px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>AI Quiz Game</h1>
+
+<div id="startScreen">
+  <input type="text" id="playerName" placeholder="ใส่ชื่อผู้เล่น">
+  <select id="category">
+    <option value="animal">สัตว์</option>
+    <option value="fruit">ผลไม้</option>
+  </select>
+  <button onclick="startGame()">เริ่มเกม</button>
+</div>
+
+<div id="gameScreen" style="display:none;">
+  <h2 id="scoreBoard"></h2>
+  <img id="image" src="">
+  <div id="options"></div>
+</div>
+
+<script>
+
+let playerName = "";
+
+async function startGame(){
+  playerName = document.getElementById("playerName").value;
+  const category = document.getElementById("category").value;
+
+  if(!playerName){
+    alert("กรุณาใส่ชื่อ");
+    return;
+  }
+
+  await fetch("/api/start",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ name:playerName, category })
+  });
+
+  document.getElementById("startScreen").style.display="none";
+  document.getElementById("gameScreen").style.display="block";
+
+  loadQuestion();
+}
+
+async function loadQuestion(){
+  const res = await fetch(`/api/question/${playerName}`);
+  const data = await res.json();
+
+  if(data.gameOver){
+    alert("เกมจบ! คะแนนรวม: " + data.finalScore);
+    location.reload();
+    return;
+  }
+
+  document.getElementById("image").src = data.image;
+  document.getElementById("scoreBoard").innerText =
+    `คะแนน: ${data.score} | ผิด: ${data.wrong}/5`;
+
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML = "";
+
+  data.options.forEach(option=>{
+    const btn = document.createElement("button");
+    btn.innerText = option;
+    btn.onclick = ()=> submitAnswer(option);
+    optionsDiv.appendChild(btn);
+  });
+}
+
+async function submitAnswer(answer){
+  const res = await fetch(`/api/answer/${playerName}`,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ answer })
+  });
+
+  const data = await res.json();
+
+  if(data.gameOver){
+    alert("เกมจบ! คะแนนรวม: " + data.finalScore);
+    location.reload();
+    return;
+  }
+
+  loadQuestion();
+}
+
+</script>
+
+</body>
+</html>
