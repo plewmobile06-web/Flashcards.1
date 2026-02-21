@@ -184,6 +184,15 @@ async function submitAnswer(answer, buttonElement){
     rankingDiv.appendChild(box);
   });
 
+  document.addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    const restartBtn = document.getElementById("restartBtn");
+    if (restartBtn && restartBtn.style.display !== "none") {
+      restartBtn.click();
+    }
+  }
+});
+
   }
 }
 

@@ -2,7 +2,8 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>Login</title>
+<title>เข้าสู่ระบบ</title>
+
 <style>
 body{
   margin:0;
@@ -10,65 +11,105 @@ body{
   display:flex;
   justify-content:center;
   align-items:center;
-  font-family:Arial;
-  background:#f5f5f5;
+  font-family:Arial, sans-serif;
+  background:#f0f2f5;
 }
+
 .card{
   background:white;
   padding:40px;
-  border-radius:15px;
-  width:300px;
+  border-radius:20px;
+  width:320px;
   text-align:center;
-  box-shadow:0 10px 25px rgba(0,0,0,0.1);
+  box-shadow:0 15px 35px rgba(0,0,0,0.1);
 }
+
+h2{
+  margin-bottom:20px;
+}
+
 input{
   width:100%;
-  padding:10px;
+  padding:12px;
   margin:10px 0;
   font-size:16px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  box-sizing:border-box;
 }
+
 button{
   width:100%;
-  padding:10px;
+  padding:12px;
+  margin-top:10px;
   font-size:16px;
+  border:none;
+  border-radius:10px;
+  background:#4CAF50;
+  color:white;
   cursor:pointer;
+}
+
+button:hover{
+  background:#45a049;
 }
 </style>
 </head>
+
 <body>
 
 <div class="card">
   <h2>เข้าสู่ระบบ</h2>
-  <input id="name" placeholder="ชื่อผู้ใช้">
-  <input id="password" 
-       type="password" 
-       placeholder="รหัสผ่าน (ห้ามมีเว้นวรรค)"
-       onkeydown="return noSpace(event)"
-       oninput="removeSpace(this)">
-  <button onclick="login()">เข้าสู่ระบบ</button>
+
+  <form id="loginForm">
+    <input id="name" placeholder="ชื่อผู้ใช้" required>
+
+    <input 
+      id="password"
+      type="password"
+      placeholder="รหัสผ่าน (ห้ามมีเว้นวรรค)"
+      required
+    >
+
+    <button type="submit">เข้าสู่ระบบ</button>
+  </form>
 </div>
 
 <script>
-function login(){
+
+const form = document.getElementById("loginForm");
+const passwordInput = document.getElementById("password");
+
+/* 🔥 กัน Space ตั้งแต่กด */
+passwordInput.addEventListener("keydown", function(e){
+  if(e.key === " "){
+    e.preventDefault();
+  }
+});
+
+/* 🔥 กัน Paste ที่มีช่องว่าง */
+passwordInput.addEventListener("input", function(){
+  this.value = this.value.replace(/\s/g, "");
+});
+
+/* 🔥 กด Enter ได้แน่นอน */
+form.addEventListener("submit", function(e){
+  e.preventDefault();
+
   const name = document.getElementById("name").value.trim();
-  const password = document.getElementById("password").value.trim();
+  const password = passwordInput.value;
 
   if(!name || !password){
     alert("กรอกข้อมูลให้ครบ");
     return;
   }
 
-  if(password.includes(" ")){
-    alert("รหัสผ่านห้ามมีเว้นวรรค");
-    return;
-  }
-
-  // ไม่ใช้ API แล้ว
   localStorage.setItem("name", name);
   localStorage.setItem("password", password);
 
-  location.href="menu.html";
-}
+  location.href = "menu.html";
+});
+
 </script>
 
 </body>

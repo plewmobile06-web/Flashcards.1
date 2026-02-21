@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>เลือกหมวดหมู่</title>
+
 <style>
 body{
   margin:0;
@@ -11,41 +12,69 @@ body{
   justify-content:center;
   align-items:center;
   font-family:Arial;
-  background:#fafafa;
+  background:linear-gradient(135deg,#e8f5e9,#f1f8e9);
 }
+
 .card{
   background:white;
   padding:40px;
-  width:300px;
+  width:350px;
   text-align:center;
-  border-radius:15px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.1);
+  border-radius:20px;
+  box-shadow:0 15px 35px rgba(0,0,0,0.15);
 }
+
 .option{
-  padding:15px;
-  margin:12px 0;
+  padding:18px;
+  margin:15px 0;
   background:#e0e0e0;
-  border-radius:10px;
+  border-radius:12px;
   cursor:pointer;
-  font-size:18px;
+  font-size:20px;
+  transition:0.3s;
 }
+
 .option:hover{
   background:#4CAF50;
   color:white;
+}
+
+.option.active{
+  background:#4CAF50;
+  color:white;
+  font-weight:bold;
+}
+
+.hint{
+  margin-top:20px;
+  font-size:14px;
+  color:#777;
 }
 </style>
 </head>
 <body>
 
 <div class="card">
-  <h2>เลือกหมวดหมู่</h2>
+  <h2>🎮 เลือกหมวดหมู่</h2>
 
-  <div class="option" onclick="startGame('animal')">Animal</div>
-  <div class="option" onclick="startGame('fruit')">Fruit</div>
+  <div class="option active" data-category="animal">Animal</div>
+  <div class="option" data-category="fruit">Fruit</div>
 
+  <div class="hint">
+    ใช้ ← → เปลี่ยนหมวด<br>
+    กด Enter เพื่อเริ่มเกม
+  </div>
 </div>
 
 <script>
+const options = document.querySelectorAll(".option");
+let selectedIndex = 0;
+
+function updateSelection(){
+  options.forEach(opt=>opt.classList.remove("active"));
+  options[selectedIndex].classList.add("active");
+}
+
 async function startGame(category){
 
   const name = localStorage.getItem("name");
@@ -65,6 +94,34 @@ async function startGame(category){
 
   location.href="game.html";
 }
+
+/* คลิกเมาส์ */
+options.forEach((option,index)=>{
+  option.addEventListener("click", ()=>{
+    selectedIndex = index;
+    updateSelection();
+    startGame(option.dataset.category);
+  });
+});
+
+/* ควบคุมด้วยคีย์บอร์ด */
+window.addEventListener("keydown", function(e){
+
+  if(e.key === "ArrowRight"){
+    selectedIndex = (selectedIndex + 1) % options.length;
+    updateSelection();
+  }
+
+  if(e.key === "ArrowLeft"){
+    selectedIndex = (selectedIndex - 1 + options.length) % options.length;
+    updateSelection();
+  }
+
+  if(e.key === "Enter"){
+    startGame(options[selectedIndex].dataset.category);
+  }
+
+});
 </script>
 
 </body>
