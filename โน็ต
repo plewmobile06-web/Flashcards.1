@@ -1,0 +1,9 @@
+/* save เข้าลิ้ง */
+// git add .
+// git commit -m "update code"
+// git push
+
+/* save, รัน */
+// node server.js
+// ngrok http 7777
+// 54726244-0fc3b5ea4b3d82698fc5045b0

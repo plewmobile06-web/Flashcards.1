@@ -10,17 +10,33 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔥 ใส่ Pixabay API Key ตรงนี้
+// 🔥 ใส่ API Key ของคุณตรงนี้
 const PIXABAY_KEY = "54726244-0fc3b5ea4b3d82698fc5045b0";
 
 const data = {
   animal: [
     "cat","dog","lion","tiger","elephant",
-    "zebra","giraffe","monkey","panda","bear"
+    "zebra","giraffe","monkey","panda","bear",
+    "horse","cow","buffalo","goat","sheep",
+    "deer","wolf","fox","rabbit","kangaroo",
+    "koala","hippopotamus","rhinoceros","leopard","cheetah",
+    "camel","donkey","squirrel","bat","otter",
+    "polar bear","sloth","chimpanzee","gorilla","hamster",
+    "mouse","rat","hedgehog","skunk","raccoon",
+    "crocodile","alligator","snake","lizard","turtle",
+    "frog","penguin","owl","eagle","parrot"
   ],
   fruit: [
     "apple","banana","mango","orange","grape",
-    "pineapple","durian","watermelon","papaya","kiwi"
+    "pineapple","durian","watermelon","papaya","kiwi",
+    "strawberry","blueberry","raspberry","blackberry","cherry",
+    "peach","pear","plum","apricot","nectarine",
+    "coconut","pomegranate","guava","lychee","longan",
+    "jackfruit","dragon fruit","passion fruit","tangerine","lime",
+    "lemon","grapefruit","avocado","fig","date",
+    "persimmon","starfruit","mulberry","cranberry","currant",
+    "cantaloupe","honeydew","pomelo","sapodilla","rambutan",
+    "mangosteen","soursop","tamarind","olive","quince"
   ]
 };
 
@@ -37,10 +53,10 @@ function randomOptions(correct, arr) {
   return [...wrong4, correct].sort(() => 0.5 - Math.random());
 }
 
-// ✅ ดึงรูปตรงคำตอบจริง
+// 🔥 ดึงรูปจาก Pixabay
 async function generateImage(keyword, category) {
   try {
-    const query = `${keyword} ${category}`;
+    const query = `${keyword}`;
 
     const res = await axios.get("https://pixabay.com/api/", {
       params: {
@@ -48,12 +64,14 @@ async function generateImage(keyword, category) {
         q: query,
         image_type: "photo",
         safesearch: true,
-        per_page: 20
+        per_page: 5
       }
     });
 
-    if (!res.data.hits.length) {
-      return "https://via.placeholder.com/600";
+    console.log("PIXABAY RESULT:", res.data.hits.length);
+
+    if (!res.data.hits || res.data.hits.length === 0) {
+      return "https://via.placeholder.com/400?text=No+Image";
     }
 
     const randomImage =
@@ -62,8 +80,8 @@ async function generateImage(keyword, category) {
     return randomImage.webformatURL;
 
   } catch (err) {
-    console.log("PIXABAY ERROR:", err.message);
-    return "https://via.placeholder.com/600";
+    console.log("PIXABAY ERROR FULL:", err.response?.data || err.message);
+    return "https://via.placeholder.com/400?text=API+Error";
   }
 }
 
@@ -87,7 +105,6 @@ app.post("/api/start", (req, res) => {
 });
 
 app.get("/api/question/:name", async (req, res) => {
-
   const { name } = req.params;
   const player = players[name];
 
@@ -120,7 +137,6 @@ app.get("/api/question/:name", async (req, res) => {
 });
 
 app.post("/api/answer/:name", (req, res) => {
-
   const { name } = req.params;
   const { answer } = req.body;
 

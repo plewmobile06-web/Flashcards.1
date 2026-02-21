@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>เลือกหมวดหมู่</title>
+<style>
+body{
+  margin:0;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family:Arial;
+  background:#fafafa;
+}
+.card{
+  background:white;
+  padding:40px;
+  width:300px;
+  text-align:center;
+  border-radius:15px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.1);
+}
+.option{
+  padding:15px;
+  margin:12px 0;
+  background:#e0e0e0;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:18px;
+}
+.option:hover{
+  background:#4CAF50;
+  color:white;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>เลือกหมวดหมู่</h2>
+
+  <div class="option" onclick="startGame('animal')">Animal</div>
+  <div class="option" onclick="startGame('fruit')">Fruit</div>
+
+</div>
+
+<script>
+async function startGame(category){
+
+  const name = localStorage.getItem("name");
+  const password = localStorage.getItem("password");
+
+  if(!name || !password){
+    alert("กรุณาเข้าสู่ระบบใหม่");
+    location.href="login.html";
+    return;
+  }
+
+  await fetch("/api/start",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ name, password, category })
+  });
+
+  location.href="game.html";
+}
+</script>
+
+</body>
+</html>

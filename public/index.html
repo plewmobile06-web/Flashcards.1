@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>AI Quiz Game</title>
+<meta http-equiv="refresh" content="0; url=login.html">
+</head>
+<body></body>
+</html>
 
 <style>
 body{
@@ -37,12 +39,15 @@ button{
 <h1>AI Quiz Game</h1>
 
 <div id="startScreen">
-  <input type="text" id="playerName" placeholder="ใส่ชื่อผู้เล่น">
-  <select id="category">
-    <option value="animal">สัตว์</option>
-    <option value="fruit">ผลไม้</option>
-  </select>
-  <button onclick="startGame()">เริ่มเกม</button>
+  <input type="text" id="playerName" placeholder="ใส่ชื่อผู้เล่น"><br><br>
+  <input type="password" id="password" placeholder="รหัสผ่าน (ห้ามมีเว้นวรรค)"><br><br>
+
+  <div style="margin-top:20px;">
+    <div onclick="selectCategory('animal')" class="cat">สัตว์</div>
+    <div onclick="selectCategory('fruit')" class="cat">ผลไม้</div>
+  </div>
+
+  <button onclick="startGame()">เข้าสู่เกม</button>
 </div>
 
 <div id="gameScreen" style="display:none;">

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Game</title>
+<style>
+body{
+  font-family:Arial;
+  text-align:center;
+  background:#f5f5f5;
+}
+img{
+  width:300px;
+  height:300px;
+  object-fit:contain;
+  margin:20px;
+}
+button{
+  padding:10px 20px;
+  margin:10px;
+  font-size:16px;
+  cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<h2 id="scoreBoard">Score: 0 | Wrong: 0</h2>
+<img id="image" src="">
+<div id="options"></div>
+
+<script>
+const name = localStorage.getItem("name");
+const password = localStorage.getItem("password");
+
+if(!name || !password){
+  alert("กรุณาเข้าสู่ระบบ");
+  location.href="login.html";
+}
+
+async function loadQuestion(){
+
+  const name = localStorage.getItem("name");
+
+  const res = await fetch(`/api/question/${name}`);
+  const data = await res.json();
+
+  console.log("QUESTION DATA:", data);
+
+  // 🔥 เช็ค error ก่อน
+  if(data.error){
+    alert("ยังไม่ได้เริ่มเกม กรุณาเลือกหมวดหมู่ใหม่");
+    location.href = "menu.html";
+    return;
+  }
+
+  if(data.gameOver){
+    alert("เกมจบ! คะแนนรวม: " + data.finalScore);
+    location.href = "menu.html";
+    return;
+  }
+
+  document.getElementById("image").src = data.image || "";
+
+  document.getElementById("scoreBoard").innerText =
+    `คะแนน: ${data.score ?? 0} | ผิด: ${data.wrong ?? 0}/5`;
+
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML = "";
+
+  if(!data.options || data.options.length === 0){
+    optionsDiv.innerHTML = "<p>ไม่มีตัวเลือก</p>";
+    return;
+  }
+
+  data.options.forEach(option=>{
+    const btn = document.createElement("button");
+    btn.innerText = option;
+    btn.style.display = "block";
+    btn.style.margin = "10px auto";
+    btn.onclick = ()=> submitAnswer(option);
+    optionsDiv.appendChild(btn);
+  });
+}
+
+async function submitAnswer(answer){
+
+  const name = localStorage.getItem("name");
+
+  const res = await fetch(`/api/answer/${name}`,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ answer })
+  });
+
+  const data = await res.json();
+
+  if(data.gameOver){
+    alert("เกมจบ! คะแนนรวม: " + data.finalScore);
+    location.href="menu.html";
+    return;
+  }
+
+  loadQuestion();
+}
+
+loadQuestion();
+</script>
+
+</body>
+</html>
