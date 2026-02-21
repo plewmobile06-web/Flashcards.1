@@ -187,6 +187,16 @@ app.post("/api/answer/:name", (req, res) => {
     score: player.score,
     wrong: player.wrong
   });
+
+  app.get("/api/ranking", (req, res) => {
+
+  const ranking = Object.entries(highScores)
+    .map(([name, score]) => ({ name, score }))
+    .sort((a, b) => b.score - a.score);
+
+  res.json(ranking);
+
+  });
 });
 
 /* ========================= */
