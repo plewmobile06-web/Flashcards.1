@@ -31,11 +31,18 @@ button.wrong{
   color:white;
 }
 
+#scoreBoard{
+  margin-bottom:10px;
+  font-weight:bold;
+}
 </style>
 </head>
 <body>
 
-<h2 id="scoreBoard">Score: 0 | Wrong: 0</h2>
+<h2 id="scoreBoard">คะแนน: 0 | ผิด: 0/5</h2>
+<div id="highScoreBox">
+  คะแนนสูงสุด: <span id="highScore">0</span>
+</div>
 <img id="image" src="">
 <div id="options"></div>
 
@@ -74,6 +81,7 @@ async function loadQuestion(){
 
   document.getElementById("scoreBoard").innerText =
     `คะแนน: ${data.score ?? 0} | ผิด: ${data.wrong ?? 0}/5`;
+    document.getElementById("highScore").innerText = data.highScore ?? 0;
 
   const optionsDiv = document.getElementById("options");
   optionsDiv.innerHTML = "";

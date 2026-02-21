@@ -1,3 +1,4 @@
+import fs from "fs";
 import express from "express";
 import axios from "axios";
 import path from "path";
@@ -41,6 +42,13 @@ const data = {
 };
 
 const players = {};
+
+let highScores = {};
+
+if (fs.existsSync("scores.json")) {
+  const raw = fs.readFileSync("scores.json");
+  highScores = JSON.parse(raw);
+}
 
 function randomItem(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -98,7 +106,7 @@ app.post("/api/start", (req, res) => {
     score: 0,
     wrong: 0,
     category,
-    highScore: players[name]?.highScore || 0
+    highScore: highScores[name] || 0
   };
 
   res.json({ message: "Game started" });
@@ -132,7 +140,8 @@ app.get("/api/question/:name", async (req, res) => {
     image,
     options,
     score: player.score,
-    wrong: player.wrong
+    wrong: player.wrong,
+    highScore: player.highScore
   });
 });
 
@@ -154,8 +163,12 @@ app.post("/api/answer/:name", (req, res) => {
     player.wrong++;
   }
 
+  // ✅ บันทึกคะแนนสูงสุด (ใส่ตรงนี้ 🔥)
   if (player.score > player.highScore) {
     player.highScore = player.score;
+    highScores[name] = player.score;
+
+    fs.writeFileSync("scores.json", JSON.stringify(highScores, null, 2));
   }
 
   if (player.wrong >= 5) {
