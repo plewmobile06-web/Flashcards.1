@@ -141,7 +141,9 @@ app.post("/api/answer/:name", (req, res) => {
   const { answer } = req.body;
 
   const player = players[name];
-  if (!player) return res.status(400).json({ error: "Player not found" });
+  if (!player) {
+    return res.status(400).json({ error: "Player not found" });
+  }
 
   let correct = false;
 
@@ -159,6 +161,7 @@ app.post("/api/answer/:name", (req, res) => {
   if (player.wrong >= 5) {
     return res.json({
       correct,
+      correctAnswer: player.currentAnswer,
       gameOver: true,
       finalScore: player.score,
       highScore: player.highScore
@@ -167,6 +170,7 @@ app.post("/api/answer/:name", (req, res) => {
 
   res.json({
     correct,
+    correctAnswer: player.currentAnswer,
     score: player.score,
     wrong: player.wrong
   });

@@ -21,6 +21,16 @@ button{
   font-size:16px;
   cursor:pointer;
 }
+button.correct{
+  background-color:#4CAF50;
+  color:white;
+}
+
+button.wrong{
+  background-color:#f44336;
+  color:white;
+}
+
 </style>
 </head>
 <body>
@@ -78,12 +88,14 @@ async function loadQuestion(){
     btn.innerText = option;
     btn.style.display = "block";
     btn.style.margin = "10px auto";
-    btn.onclick = ()=> submitAnswer(option);
+
+    btn.onclick = ()=> submitAnswer(option, btn);
+
     optionsDiv.appendChild(btn);
   });
 }
 
-async function submitAnswer(answer){
+async function submitAnswer(answer, buttonElement){
 
   const name = localStorage.getItem("name");
 
@@ -95,13 +107,41 @@ async function submitAnswer(answer){
 
   const data = await res.json();
 
-  if(data.gameOver){
-    alert("เกมจบ! คะแนนรวม: " + data.finalScore);
-    location.href="menu.html";
-    return;
+  const allButtons = document.querySelectorAll("#options button");
+
+  // 🔥 ปิดการกดปุ่มทั้งหมดก่อน
+  allButtons.forEach(btn => btn.disabled = true);
+
+  if(data.correct){
+
+    // ✅ ถ้าตอบถูก
+    buttonElement.classList.add("correct");
+
+  }else{
+
+    // ❌ ถ้าตอบผิด
+    buttonElement.classList.add("wrong");
+
+    // 🔥 แสดงเฉลยเป็นสีเขียว
+    allButtons.forEach(btn=>{
+      if(btn.innerText === data.correctAnswer){
+        btn.classList.add("correct");
+      }
+    });
   }
 
-  loadQuestion();
+  // ⏳ รอ 1 วิ แล้วโหลดข้อใหม่
+  setTimeout(()=>{
+
+    if(data.gameOver){
+      alert("เกมจบ! คะแนนรวม: " + data.finalScore);
+      location.href="menu.html";
+      return;
+    }
+
+    loadQuestion();
+
+  },1000);
 }
 
 loadQuestion();
