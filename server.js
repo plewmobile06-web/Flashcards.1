@@ -16,8 +16,25 @@ const PIXABAY_KEY = "54726244-0fc3b5ea4b3d82698fc5045b0";
 /* ========================= DATA ========================= */
 
 const data = {
-  animal: ["cat","dog","lion","tiger","elephant","zebra","giraffe","monkey","panda","bear"],
-  fruit: ["apple","banana","mango","orange","grape","pineapple","watermelon","papaya"]
+  animal: [
+    "cat","dog","elephant","tiger","lion","horse","cow","buffalo",
+    "goat","sheep","pig","rabbit","deer","monkey","bear","wolf",
+    "fox","panda","giraffe","zebra","hippopotamus","rhinoceros","crocodile","snake",
+    "turtle","frog","eagle","owl","parrot","penguin","shark","dolphin",
+    "whale","goldfish","hammerhead shark","crab","shrimp","bee","butterfly","ant",
+    "donkey","cheetah","leopard","bat","otter","sloth","camel","kangaroo",
+    "koala","meerkat"
+  ],
+
+  fruit: [
+    "apple","banana","mango","orange","grape","pineapple","watermelon","papaya",
+    "strawberry","pear","peach","plum","cherry","kiwi","coconut","lemon",
+    "lime","guava","durian","jackfruit","melon","apricot","fig","pomegranate",
+    "avocado","dragonfruit","lychee","longan","rambutan","blueberry","blackberry",
+    "raspberry","cranberry","passionfruit","tangerine","mandarin","grapefruit",
+    "persimmon","pomelo","starfruit","mulberry","nectarine","date",
+    "mangosteen","sapodilla","soursop","custard apple","quince","gooseberry"
+  ]
 };
 
 const players = {};
@@ -42,26 +59,52 @@ function randomOptions(correct, arr){
 
 async function generateImage(keyword, category){
   try{
+
+    // 🔥 ค้นแบบบังคับคำตรง ๆ
+    const query = `"${keyword}" ${category}`;
+
     const res = await axios.get("https://pixabay.com/api/",{
       params:{
         key: PIXABAY_KEY,
-        q: category === "fruit"
-          ? `${keyword} fruit`
-          : `${keyword} animal`,
+        q: query,
         image_type:"photo",
         safesearch:true,
-        per_page:5
-  }
-});
+        per_page:30
+      }
+    });
 
-    if(!res.data.hits.length){
-      return "https://via.placeholder.com/400?text=No+Image";
+    if(res.data.hits && res.data.hits.length > 0){
+
+      // 🔥 กรองเฉพาะรูปที่ tag มี keyword จริง
+      const filtered = res.data.hits.filter(img =>
+        img.tags.toLowerCase().includes(keyword.toLowerCase())
+      );
+
+      const pool = filtered.length > 0 ? filtered : res.data.hits;
+
+      return pool[Math.floor(Math.random()*pool.length)].webformatURL;
     }
 
-    return res.data.hits[Math.floor(Math.random()*res.data.hits.length)].webformatURL;
+    // 🔥 ถ้าไม่เจอรูป ให้ลองค้นแบบง่ายลง
+    const retry = await axios.get("https://pixabay.com/api/",{
+      params:{
+        key: PIXABAY_KEY,
+        q: `${keyword} ${category}`,
+        image_type:"photo",
+        safesearch:true,
+        per_page:10
+      }
+    });
 
-  }catch{
-    return "https://via.placeholder.com/400?text=Error";
+    if(retry.data.hits.length > 0){
+      return retry.data.hits[0].webformatURL;
+    }
+
+    return `https://via.placeholder.com/400?text=${keyword}`;
+
+  }catch(error){
+    console.log("Image error:", error.message);
+    return `https://via.placeholder.com/400?text=${keyword}`;
   }
 }
 
@@ -101,8 +144,16 @@ app.get("/api/question/:name", async (req,res)=>{
   }
 
   const items = data[player.category];
-  const correct = randomItem(items);
-  const image = await generateImage(correct, player.category);
+  let correct;
+  let image = null;
+  let attempts = 0;
+
+  while (!image && attempts < 10) {
+    correct = randomItem(items);
+    image = await generateImage(correct, player.category);
+    attempts++;
+  }
+
   const options = randomOptions(correct, items);
 
   player.currentAnswer = correct;
