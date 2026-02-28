@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-const PIXABAY_KEY = "54726244-0fc3b5ea4b3d82698fc5045b0"; // ใส่ key ตรงนี้
+const PIXABAY_KEY = "54726244-0fc3b5ea4b3d82698fc5045b0";
 
 /* ========================= DATA ========================= */
 
