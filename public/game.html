@@ -3,24 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <title>Game</title>
+
 <style>
 body{
   font-family:Arial;
   text-align:center;
   background:#f5f5f5;
 }
+
 img{
   width:300px;
   height:300px;
   object-fit:contain;
   margin:20px;
 }
+
 button{
   padding:10px 20px;
   margin:10px;
   font-size:16px;
   cursor:pointer;
 }
+
 button.correct{
   background-color:#4CAF50;
   color:white;
@@ -31,40 +35,56 @@ button.wrong{
   color:white;
 }
 
+/* 🔥 ไฮไลต์ปุ่มที่เลือก */
+button.selected{
+  outline:3px solid #2196F3;
+  transform:scale(1.05);
+}
+
 #scoreBoard{
   margin-bottom:10px;
   font-weight:bold;
 }
 </style>
 </head>
+
 <body>
 
 <h2 id="scoreBoard">คะแนน: 0 | ผิด: 0/5</h2>
 <div id="highScoreBox">
   คะแนนสูงสุด: <span id="highScore">0</span>
 </div>
+
 <img id="image" src="">
 <div id="options"></div>
 
 <script>
+
 const name = localStorage.getItem("name");
 const password = localStorage.getItem("password");
+
+let selectedIndex = 0;
 
 if(!name || !password){
   alert("กรุณาเข้าสู่ระบบ");
   location.href="login.html";
 }
 
-async function loadQuestion(){
+function updateSelection(){
+  const buttons = document.querySelectorAll("#options button");
 
-  const name = localStorage.getItem("name");
+  buttons.forEach(btn => btn.classList.remove("selected"));
+
+  if(buttons[selectedIndex]){
+    buttons[selectedIndex].classList.add("selected");
+  }
+}
+
+async function loadQuestion(){
 
   const res = await fetch(`/api/question/${name}`);
   const data = await res.json();
 
-  console.log("QUESTION DATA:", data);
-
-  // 🔥 เช็ค error ก่อน
   if(data.error){
     alert("ยังไม่ได้เริ่มเกม กรุณาเลือกหมวดหมู่ใหม่");
     location.href = "menu.html";
@@ -72,8 +92,7 @@ async function loadQuestion(){
   }
 
   if(data.gameOver){
-    alert("เกมจบ! คะแนนรวม: " + data.finalScore);
-    location.href = "menu.html";
+    showRanking(data.finalScore);
     return;
   }
 
@@ -81,15 +100,12 @@ async function loadQuestion(){
 
   document.getElementById("scoreBoard").innerText =
     `คะแนน: ${data.score ?? 0} | ผิด: ${data.wrong ?? 0}/5`;
-    document.getElementById("highScore").innerText = data.highScore ?? 0;
+
+  document.getElementById("highScore").innerText =
+    data.highScore ?? 0;
 
   const optionsDiv = document.getElementById("options");
   optionsDiv.innerHTML = "";
-
-  if(!data.options || data.options.length === 0){
-    optionsDiv.innerHTML = "<p>ไม่มีตัวเลือก</p>";
-    return;
-  }
 
   data.options.forEach(option=>{
     const btn = document.createElement("button");
@@ -101,11 +117,13 @@ async function loadQuestion(){
 
     optionsDiv.appendChild(btn);
   });
+
+  // 🔥 รีเซ็ตตำแหน่งตัวเลือกทุกข้อ
+  selectedIndex = 0;
+  updateSelection();
 }
 
 async function submitAnswer(answer, buttonElement){
-
-  const name = localStorage.getItem("name");
 
   const res = await fetch(`/api/answer/${name}`,{
     method:"POST",
@@ -116,21 +134,13 @@ async function submitAnswer(answer, buttonElement){
   const data = await res.json();
 
   const allButtons = document.querySelectorAll("#options button");
-
-  // 🔥 ปิดการกดปุ่มทั้งหมดก่อน
   allButtons.forEach(btn => btn.disabled = true);
 
   if(data.correct){
-
-    // ✅ ถ้าตอบถูก
     buttonElement.classList.add("correct");
-
   }else{
-
-    // ❌ ถ้าตอบผิด
     buttonElement.classList.add("wrong");
 
-    // 🔥 แสดงเฉลยเป็นสีเขียว
     allButtons.forEach(btn=>{
       if(btn.innerText === data.correctAnswer){
         btn.classList.add("correct");
@@ -138,19 +148,16 @@ async function submitAnswer(answer, buttonElement){
     });
   }
 
-  // ⏳ รอ 1 วิ แล้วโหลดข้อใหม่
   setTimeout(()=>{
-
     if(data.gameOver){
       showRanking(data.finalScore);
       return;
     }
-
     loadQuestion();
-
   },1000);
+}
 
-  async function showRanking(finalScore){
+async function showRanking(finalScore){
 
   document.body.innerHTML = `
     <h1>เกมจบ!</h1>
@@ -183,22 +190,32 @@ async function submitAnswer(answer, buttonElement){
 
     rankingDiv.appendChild(box);
   });
-
-  document.addEventListener("keydown", function (e) {
-  if (e.key === "Enter") {
-    const restartBtn = document.getElementById("restartBtn");
-    if (restartBtn && restartBtn.style.display !== "none") {
-      restartBtn.click();
-    }
-  }
-});
-
-  }
 }
+
+/* 🔥 ควบคุมด้วยคีย์บอร์ด */
+document.addEventListener("keydown", function(e){
+
+  const buttons = document.querySelectorAll("#options button");
+  if(buttons.length === 0) return;
+
+  if(e.key === "ArrowDown"){
+    selectedIndex = (selectedIndex + 1) % buttons.length;
+    updateSelection();
+  }
+
+  else if(e.key === "ArrowUp"){
+    selectedIndex = (selectedIndex - 1 + buttons.length) % buttons.length;
+    updateSelection();
+  }
+
+  else if(e.key === "Enter"){
+    buttons[selectedIndex].click();
+  }
+
+});
 
 loadQuestion();
 
 </script>
-
 </body>
 </html>

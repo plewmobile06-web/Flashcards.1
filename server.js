@@ -40,17 +40,19 @@ function randomOptions(correct, arr){
   return [...wrong4, correct].sort(()=>0.5-Math.random());
 }
 
-async function generateImage(keyword){
+async function generateImage(keyword, category){
   try{
     const res = await axios.get("https://pixabay.com/api/",{
       params:{
         key: PIXABAY_KEY,
-        q: keyword,
+        q: category === "fruit"
+          ? `${keyword} fruit`
+          : `${keyword} animal`,
         image_type:"photo",
         safesearch:true,
         per_page:5
-      }
-    });
+  }
+});
 
     if(!res.data.hits.length){
       return "https://via.placeholder.com/400?text=No+Image";
@@ -100,7 +102,7 @@ app.get("/api/question/:name", async (req,res)=>{
 
   const items = data[player.category];
   const correct = randomItem(items);
-  const image = await generateImage(correct);
+  const image = await generateImage(correct, player.category);
   const options = randomOptions(correct, items);
 
   player.currentAnswer = correct;
