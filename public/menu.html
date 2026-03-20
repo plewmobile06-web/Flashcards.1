@@ -24,9 +24,13 @@ body{
   box-shadow:0 15px 35px rgba(0,0,0,0.15);
 }
 
+#categoryArea {
+  margin: 20px 0;
+}
+
 .option{
   padding:18px;
-  margin:15px 0;
+  margin:10px 0;
   background:#e0e0e0;
   border-radius:12px;
   cursor:pointer;
@@ -50,6 +54,56 @@ body{
   font-size:14px;
   color:#777;
 }
+
+.add-btn {
+  width: 50px;
+  height: 50px;
+  background: #2196F3;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 30px;
+  margin: 20px auto 0;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  transition: 0.3s;
+}
+.add-btn:hover { transform: scale(1.1); background: #1976D2; }
+
+#categoryModal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background: white;
+  width: 90%; max-width: 400px;
+  padding: 25px;
+  border-radius: 15px;
+  max-height: 80vh;
+  overflow-y: auto;
+  text-align: left;
+}
+.word-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 10px 0;
+}
+.modal-content input {
+  width: 100%; padding: 10px;
+  border: 1px solid #ddd; border-radius: 5px;
+  box-sizing: border-box;
+}
+.btn-group { display: flex; gap: 10px; margin-top: 15px; }
+.btn-save { background: #4CAF50; color: white; flex: 1; border: none; padding: 12px; cursor: pointer; border-radius: 5px; font-weight: bold; }
+.btn-close { background: #f44336; color: white; flex: 1; border: none; padding: 12px; cursor: pointer; border-radius: 5px; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -57,72 +111,136 @@ body{
 <div class="card">
   <h2>🎮 เลือกหมวดหมู่</h2>
 
-  <div class="option active" data-category="animal">Animal</div>
-  <div class="option" data-category="fruit">Fruit</div>
+  <div id="categoryArea"></div>
 
   <div class="hint">
-    ใช้ ← → เปลี่ยนหมวด<br>
-    กด Enter เพื่อเริ่มเกม
+    คลิกเลือกหมวดหมู่เพื่อเริ่มเกม<br>
+    หรือใช้ ← → และ Enter
+  </div>
+  <div class="add-btn" onclick="openModal()">+</div>
+</div>
+
+<div id="categoryModal">
+  <div class="modal-content">
+    <h3 style="margin-top:0;">✨ สร้างหมวดหมู่ใหม่</h3>
+    <label>ชื่อหมวดหมู่ (ภาษาอังกฤษ):</label>
+    <input type="text" id="newCatName" placeholder="เช่น jobs, cars">
+    
+    <p style="font-size: 13px; color: #d32f2f; font-weight: bold; margin-top: 15px;">ระบุคำศัพท์ภาษาอังกฤษ 10 คำ:</p>
+    <div class="word-grid" id="wordInputs"></div>
+    
+    <div class="btn-group">
+      <button class="btn-save" onclick="saveCategory()">บันทึก</button>
+      <button class="btn-close" onclick="closeModal()">ยกเลิก</button>
+    </div>
   </div>
 </div>
 
 <script>
-const options = document.querySelectorAll(".option");
+let categories = [];
 let selectedIndex = 0;
 
-function updateSelection(){
-  options.forEach(opt=>opt.classList.remove("active"));
-  options[selectedIndex].classList.add("active");
+// --- ฟังก์ชันจัดการ Modal ---
+function openModal() {
+    document.getElementById("categoryModal").style.display = "flex";
+    const container = document.getElementById("wordInputs");
+    container.innerHTML = "";
+    for (let i = 1; i <= 10; i++) {
+        container.innerHTML += `<input type="text" class="word-input" placeholder="คำที่ ${i}">`;
+    }
 }
 
+function closeModal() {
+    document.getElementById("categoryModal").style.display = "none";
+}
+
+// --- โหลดหมวดหมู่จาก Server ---
+async function fetchCategories() {
+    try {
+        const res = await fetch("/api/categories");
+        categories = await res.json();
+        renderCategories();
+    } catch (err) { console.error("Error loading categories:", err); }
+}
+
+function renderCategories() {
+    const area = document.getElementById("categoryArea");
+    area.innerHTML = "";
+    categories.forEach((cat, index) => {
+        const div = document.createElement("div");
+        div.className = `option ${index === selectedIndex ? 'active' : ''}`;
+        div.innerText = cat.charAt(0).toUpperCase() + cat.slice(1);
+        div.onclick = () => {
+            selectedIndex = index;
+            renderCategories();
+            startGame(cat);
+        };
+        area.appendChild(div);
+    });
+}
+
+// --- บันทึกหมวดหมู่ใหม่ ---
+async function saveCategory() {
+    const name = document.getElementById("newCatName").value.trim();
+    const inputs = document.querySelectorAll(".word-input");
+    const items = Array.from(inputs).map(i => i.value.trim()).filter(v => v !== "");
+
+    if (!name || items.length < 10) {
+        alert("กรุณากรอกชื่อหมวดหมู่และคำศัพท์ให้ครบ 10 คำ");
+        return;
+    }
+
+    const res = await fetch("/api/category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryName: name, items: items })
+    });
+
+    if (res.ok) {
+        alert("เพิ่มหมวดหมู่สำเร็จ!");
+        closeModal();
+        fetchCategories(); // โหลดรายการใหม่
+    }
+}
+
+// --- ระบบเกม ---
 async function startGame(category){
+    const name = localStorage.getItem("name");
+    // หมายเหตุ: โค้ดเดิมคุณใช้ password จาก localStorage แต่ใน server.js รับแค่ name กับ category
+    if(!name){
+        alert("กรุณาเข้าสู่ระบบใหม่");
+        location.href="login.html";
+        return;
+    }
 
-  const name = localStorage.getItem("name");
-  const password = localStorage.getItem("password");
+    await fetch("/api/start",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ name, category })
+    });
 
-  if(!name || !password){
-    alert("กรุณาเข้าสู่ระบบใหม่");
-    location.href="login.html";
-    return;
-  }
-
-  await fetch("/api/start",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ name, password, category })
-  });
-
-  location.href="game.html";
+    location.href="game.html";
 }
 
-/* คลิกเมาส์ */
-options.forEach((option,index)=>{
-  option.addEventListener("click", ()=>{
-    selectedIndex = index;
-    updateSelection();
-    startGame(option.dataset.category);
-  });
-});
-
-/* ควบคุมด้วยคีย์บอร์ด */
+// --- ควบคุมด้วยคีย์บอร์ด ---
 window.addEventListener("keydown", function(e){
+    if(document.getElementById("categoryModal").style.display === "flex") return;
 
-  if(e.key === "ArrowRight"){
-    selectedIndex = (selectedIndex + 1) % options.length;
-    updateSelection();
-  }
-
-  if(e.key === "ArrowLeft"){
-    selectedIndex = (selectedIndex - 1 + options.length) % options.length;
-    updateSelection();
-  }
-
-  if(e.key === "Enter"){
-    console.log("ENTER PRESSED");
-    startGame(options[selectedIndex].dataset.category);
-  }
-
+    if(e.key === "ArrowRight" || e.key === "ArrowDown"){
+        selectedIndex = (selectedIndex + 1) % categories.length;
+        renderCategories();
+    }
+    if(e.key === "ArrowLeft" || e.key === "ArrowUp"){
+        selectedIndex = (selectedIndex - 1 + categories.length) % categories.length;
+        renderCategories();
+    }
+    if(e.key === "Enter"){
+        startGame(categories[selectedIndex]);
+    }
 });
+
+// เริ่มต้นโหลดข้อมูล
+fetchCategories();
 </script>
 
 </body>

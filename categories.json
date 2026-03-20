@@ -1,0 +1,28 @@
+{
+  "animal": [
+    "cat",
+    "dog",
+    "elephant",
+    "tiger",
+    "lion"
+  ],
+  "fruit": [
+    "apple",
+    "banana",
+    "mango",
+    "orange",
+    "grape"
+  ],
+  "occupations": [
+    "teacher",
+    "doctor",
+    "nurse",
+    "engineer",
+    "police",
+    "programmer",
+    "data scientist",
+    "chef",
+    "waiter",
+    "driver"
+  ]
+}
