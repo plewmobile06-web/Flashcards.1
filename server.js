@@ -18,7 +18,6 @@ const PIXABAY_KEY = "54726244-0fc3b5ea4b3d82698fc5045b0";
 const CATEGORY_FILE = "categories.json";
 const SCORE_FILE = "scores.json";
 
-// ค่าเริ่มต้นถ้ายังไม่มีไฟล์ categories.json
 const defaultData = {
   animal: ["cat","dog","elephant","tiger","lion","horse","cow","pig","rabbit","monkey"],
   fruit: ["apple","banana","mango","orange","grape","pineapple","watermelon","lemon","kiwi","cherry"]
@@ -81,31 +80,42 @@ async function generateImage(keyword, category){
 
 /* ========================= ROUTES ========================= */
 
-// ดึงรายชื่อหมวดหมู่ทั้งหมด
 app.get("/api/categories", (req, res) => {
   res.json(Object.keys(data));
 });
 
-// เพิ่มหมวดหมู่ใหม่และบันทึกลงไฟล์
+app.get("/api/all-data", (req, res) => {
+  res.json(data);
+});
+
+// ดึงข้อมูล Ranking ทั้งหมด
+app.get("/api/ranking", (req, res) => {
+  // แปลง Object เป็น Array และเรียงลำดับจากมากไปน้อย
+  const rankingArray = Object.keys(highScores).map(name => ({
+    name: name,
+    score: highScores[name]
+  })).sort((a, b) => b.score - a.score);
+  
+  res.json(rankingArray.slice(0, 10)); // ส่งไปแค่ 10 อันดับแรก
+});
+
 app.post("/api/category", (req, res) => {
   const { categoryName, items } = req.body;
-
   if (!categoryName || !items || items.length < 10) {
     return res.status(400).json({ error: "ต้องมีชื่อหมวดหมู่และคำศัพท์อย่างน้อย 10 คำ" });
   }
-
   const name = categoryName.trim().toLowerCase();
   data[name] = items.map(i => i.trim().toLowerCase());
-
-  // บันทึกลงไฟล์ categories.json ทันทีเพื่อให้ข้อมูลไม่หาย
   fs.writeFileSync(CATEGORY_FILE, JSON.stringify(data, null, 2));
-
   res.json({ message: "เพิ่มหมวดหมู่สำเร็จ", categories: Object.keys(data) });
 });
 
 app.post("/api/start", (req, res) => {
   const { name, category } = req.body;
   if (!data[category]) return res.status(400).json({ error: "Invalid category" });
+
+  // รีเฟรช highScores จากไฟล์เพื่อให้ข้อมูลล่าสุดเสมอ
+  if (fs.existsSync(SCORE_FILE)) highScores = JSON.parse(fs.readFileSync(SCORE_FILE));
 
   players[name] = {
     score: 0,
@@ -119,7 +129,6 @@ app.post("/api/start", (req, res) => {
 app.get("/api/question/:name", async (req, res) => {
   const { name } = req.params;
   const player = players[name];
-
   if (!player) return res.status(400).json({ error: "Player not found" });
 
   const items = data[player.category];
@@ -128,14 +137,7 @@ app.get("/api/question/:name", async (req, res) => {
   const options = randomOptions(correct, items);
 
   player.currentAnswer = correct;
-
-  res.json({
-    image,
-    options,
-    score: player.score,
-    wrong: player.wrong,
-    highScore: player.highScore
-  });
+  res.json({ image, options, score: player.score, wrong: player.wrong, highScore: player.highScore });
 });
 
 app.post("/api/answer/:name", (req, res) => {
@@ -145,13 +147,14 @@ app.post("/api/answer/:name", (req, res) => {
 
   if (!player) return res.status(400).json({ error: "Player not found" });
 
-  let correct = answer === player.currentAnswer;
-  if (correct) {
-    player.score++;
-  } else {
-    player.wrong++;
+  let correct = (answer === player.currentAnswer);
+  if (correct) { 
+    player.score++; 
+  } else { 
+    player.wrong++; 
   }
 
+  // อัปเดตคะแนนสูงสุดในระบบและบันทึกลงไฟล์
   if (player.score > player.highScore) {
     player.highScore = player.score;
     highScores[name] = player.score;
@@ -159,14 +162,14 @@ app.post("/api/answer/:name", (req, res) => {
   }
 
   const gameOver = player.wrong >= 5;
-  res.json({
-    correct,
-    correctAnswer: player.currentAnswer,
-    score: player.score,
-    wrong: player.wrong,
-    gameOver,
-    finalScore: player.score,
-    highScore: player.highScore
+  res.json({ 
+    correct, 
+    correctAnswer: player.currentAnswer, 
+    score: player.score, 
+    wrong: player.wrong, 
+    gameOver, 
+    finalScore: player.score, 
+    highScore: player.highScore 
   });
 });
 

@@ -1,19 +1,19 @@
 {
-  "animal": [
+  "Animals": [
     "cat",
     "dog",
     "elephant",
     "tiger",
     "lion"
   ],
-  "fruit": [
+  "Fruits": [
     "apple",
     "banana",
     "mango",
     "orange",
     "grape"
   ],
-  "occupations": [
+  "Occupations": [
     "teacher",
     "doctor",
     "nurse",

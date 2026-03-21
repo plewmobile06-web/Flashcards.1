@@ -11,7 +11,7 @@ body{
   display:flex;
   justify-content:center;
   align-items:center;
-  font-family:Arial, sans-serif;
+  font-family: Arial, sans-serif;
   background:#f0f2f5;
 }
 
@@ -26,6 +26,7 @@ body{
 
 h2{
   margin-bottom:20px;
+  color: #333;
 }
 
 input{
@@ -48,6 +49,8 @@ button{
   background:#4CAF50;
   color:white;
   cursor:pointer;
+  font-weight: bold;
+  transition: 0.3s;
 }
 
 button:hover{
@@ -62,7 +65,7 @@ button:hover{
   <h2>เข้าสู่ระบบ</h2>
 
   <form id="loginForm">
-    <input id="name" placeholder="ชื่อผู้ใช้" required>
+    <input id="name" placeholder="ชื่อผู้ใช้" required autocomplete="off">
 
     <input 
       id="password"
@@ -76,40 +79,76 @@ button:hover{
 </div>
 
 <script>
-
 const form = document.getElementById("loginForm");
+const nameInput = document.getElementById("name");
 const passwordInput = document.getElementById("password");
 
-/* 🔥 กัน Space ตั้งแต่กด */
+/* ✨ ระบบ Auto-Capitalize และการกด Enter เพื่อย้ายช่อง */
+let isShiftPressed = false;
+
+nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Shift") isShiftPressed = true;
+
+    // ⬇️ ถ้ากด Enter ในช่องชื่อ ให้ย้ายไปช่องรหัสผ่าน
+    if (e.key === "Enter") {
+        e.preventDefault(); // กันฟอร์มส่งข้อมูลทันที
+        passwordInput.focus();
+    }
+});
+
+nameInput.addEventListener("keyup", (e) => {
+    if (e.key === "Shift") isShiftPressed = false;
+});
+
+nameInput.addEventListener("input", function(e) {
+    let cursorStart = this.selectionStart;
+    let val = this.value;
+    let lastCharIndex = cursorStart - 1;
+    
+    if (lastCharIndex >= 0) {
+        let isFirstChar = (lastCharIndex === 0);
+        let isAfterSpace = (val.charAt(lastCharIndex - 1) === " ");
+
+        if ((isFirstChar || isAfterSpace) && !isShiftPressed) {
+            let char = val.charAt(lastCharIndex);
+            this.value = val.slice(0, lastCharIndex) + char.toUpperCase() + val.slice(cursorStart);
+            this.setSelectionRange(cursorStart, cursorStart);
+        }
+    }
+});
+
+/* 🔥 กัน Space และระบบ Enter ในช่องรหัสผ่าน */
 passwordInput.addEventListener("keydown", function(e){
-  if(e.key === " "){
-    e.preventDefault();
-  }
+    if(e.key === " "){
+        e.preventDefault();
+    }
+    // หมายเหตุ: โดยปกติถ้ากด Enter ในช่องสุดท้ายของฟอร์ม 
+    // Browser จะสั่ง Submit ให้โดยอัตโนมัติอยู่แล้วครับ
 });
 
-/* 🔥 กัน Paste ที่มีช่องว่าง */
 passwordInput.addEventListener("input", function(){
-  this.value = this.value.replace(/\s/g, "");
+    this.value = this.value.replace(/\s/g, "");
 });
 
-/* 🔥 กด Enter ได้แน่นอน */
+/* 🔥 ฟังก์ชันส่งข้อมูลเข้าสู่เกม */
 form.addEventListener("submit", function(e){
-  e.preventDefault();
+    e.preventDefault();
 
-  const name = document.getElementById("name").value.trim();
-  const password = passwordInput.value;
+    const nameValue = nameInput.value.trim();
+    const passwordValue = passwordInput.value;
 
-  if(!name || !password){
-    alert("กรอกข้อมูลให้ครบ");
-    return;
-  }
+    if(!nameValue || !passwordValue){
+        alert("กรอกข้อมูลให้ครบ");
+        return;
+    }
 
-  localStorage.setItem("name", name);
-  localStorage.setItem("password", password);
+    localStorage.setItem("name", nameValue);
+    localStorage.setItem("password", passwordValue);
+    localStorage.setItem("playerName", nameValue);
+    localStorage.setItem("playerPass", passwordValue);
 
-  location.href = "menu.html";
+    location.href = "menu.html";
 });
-
 </script>
 
 </body>

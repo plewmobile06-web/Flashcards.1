@@ -6,87 +6,123 @@
 
 <style>
 body{
-  font-family:Arial;
-  text-align:center;
-  background:#f5f5f5;
+  font-family: 'Arial', sans-serif;
+  text-align: center;
+  background: #f5f5f5;
+  margin: 0;
+  padding: 20px;
 }
 
 img{
-  width:300px;
-  height:300px;
-  object-fit:contain;
-  margin:20px;
+  width: 300px;
+  height: 300px;
+  object-fit: contain;
+  margin: 20px;
 }
 
 button{
-  padding:10px 20px;
-  margin:10px;
-  font-size:16px;
-  cursor:pointer;
+  padding: 10px 20px;
+  margin: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  transition: 0.2s;
 }
 
 button.correct{
-  background-color:#4CAF50;
-  color:white;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
 }
 
 button.wrong{
-  background-color:#f44336;
-  color:white;
+  background-color: #f44336;
+  color: white;
+  border: none;
 }
 
-/* 🔥 ไฮไลต์ปุ่มที่เลือก */
+/* 🔥 ไฮไลต์ปุ่มที่เลือกด้วยคีย์บอร์ด */
 button.selected{
-  outline:3px solid #2196F3;
-  transform:scale(1.05);
+  outline: 3px solid #2196F3;
+  transform: scale(1.05);
+  background-color: #e3f2fd;
 }
 
 #scoreBoard{
-  margin-bottom:10px;
-  font-weight:bold;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+/* สไตล์สำหรับหน้า Ranking */
+.ranking-container {
+  max-width: 500px;
+  margin: auto;
+}
+.rank-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px auto;
+  padding: 15px 25px;
+  width: 100%;
+  max-width: 400px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  border: 1px solid #ddd;
+  box-sizing: border-box;
+}
+.my-rank-box {
+  border: 2px solid #2196F3 !important;
+  background: #e3f2fd !important;
+}
+.rank-number {
+  font-weight: bold;
+  font-size: 18px;
+  color: #1a73e8;
 }
 </style>
 </head>
 
 <body>
 
-<h2 id="scoreBoard">คะแนน: 0 | ผิด: 0/5</h2>
-<div id="highScoreBox">
-  คะแนนสูงสุด: <span id="highScore">0</span>
+<div id="gameContent">
+  <h2 id="scoreBoard">คะแนน: 0 | ผิด: 0/5</h2>
+  <div id="highScoreBox">
+    คะแนนสูงสุดของคุณ: <span id="highScore">0</span>
+  </div>
+
+  <img id="image" src="">
+  <div id="options"></div>
 </div>
 
-<img id="image" src="">
-<div id="options"></div>
-
 <script>
-
-const name = localStorage.getItem("name");
-const password = localStorage.getItem("password");
+// ดึงข้อมูลชื่อจาก localStorage (ตรวจสอบทั้ง 'name' และ 'playerName' เพื่อความแม่นยำ)
+const name = localStorage.getItem("name") || localStorage.getItem("playerName");
+const password = localStorage.getItem("password") || localStorage.getItem("playerPass");
 
 let selectedIndex = 0;
 
 if(!name || !password){
-  alert("กรุณาเข้าสู่ระบบ");
+  alert("กรุณาเข้าสู่ระบบก่อนเล่น");
   location.href="login.html";
 }
 
 function updateSelection(){
   const buttons = document.querySelectorAll("#options button");
-
   buttons.forEach(btn => btn.classList.remove("selected"));
-
   if(buttons[selectedIndex]){
     buttons[selectedIndex].classList.add("selected");
   }
 }
 
 async function loadQuestion(){
-
   const res = await fetch(`/api/question/${name}`);
   const data = await res.json();
 
   if(data.error){
-    alert("ยังไม่ได้เริ่มเกม กรุณาเลือกหมวดหมู่ใหม่");
+    alert("กรุณาเลือกหมวดหมู่ก่อนเริ่มเกม");
     location.href = "menu.html";
     return;
   }
@@ -97,12 +133,8 @@ async function loadQuestion(){
   }
 
   document.getElementById("image").src = data.image || "";
-
-  document.getElementById("scoreBoard").innerText =
-    `คะแนน: ${data.score ?? 0} | ผิด: ${data.wrong ?? 0}/5`;
-
-  document.getElementById("highScore").innerText =
-    data.highScore ?? 0;
+  document.getElementById("scoreBoard").innerText = `คะแนน: ${data.score ?? 0} | ผิด: ${data.wrong ?? 0}/5`;
+  document.getElementById("highScore").innerText = data.highScore ?? 0;
 
   const optionsDiv = document.getElementById("options");
   optionsDiv.innerHTML = "";
@@ -112,19 +144,15 @@ async function loadQuestion(){
     btn.innerText = option;
     btn.style.display = "block";
     btn.style.margin = "10px auto";
-
     btn.onclick = ()=> submitAnswer(option, btn);
-
     optionsDiv.appendChild(btn);
   });
 
-  // 🔥 รีเซ็ตตำแหน่งตัวเลือกทุกข้อ
   selectedIndex = 0;
   updateSelection();
 }
 
 async function submitAnswer(answer, buttonElement){
-
   const res = await fetch(`/api/answer/${name}`,{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -132,7 +160,6 @@ async function submitAnswer(answer, buttonElement){
   });
 
   const data = await res.json();
-
   const allButtons = document.querySelectorAll("#options button");
   allButtons.forEach(btn => btn.disabled = true);
 
@@ -140,7 +167,6 @@ async function submitAnswer(answer, buttonElement){
     buttonElement.classList.add("correct");
   }else{
     buttonElement.classList.add("wrong");
-
     allButtons.forEach(btn=>{
       if(btn.innerText === data.correctAnswer){
         btn.classList.add("correct");
@@ -154,47 +180,65 @@ async function submitAnswer(answer, buttonElement){
       return;
     }
     loadQuestion();
-  },1000);
+  }, 1000);
 }
 
+// ฟังก์ชันจัดอันดับที่จะทำงานทันทีเมื่อจบเกม
 async function showRanking(finalScore){
-
   document.body.innerHTML = `
-    <h1>เกมจบ!</h1>
-    <h2>คะแนนของคุณ: ${finalScore}</h2>
-    <div id="ranking"></div>
-    <br>
-    <button onclick="location.href='menu.html'">เล่นใหม่</button>
+    <div class="ranking-container">
+      <h1 style="color: #f44336; margin-top: 30px;">จบเกม!</h1>
+      <p style="font-size: 22px;">คะแนนรอบนี้ของคุณ: <strong style="color: #2196F3;">${finalScore}</strong></p>
+      
+      <div id="rankingList">
+        <p>กำลังโหลดการจัดอันดับผู้เล่น...</p>
+      </div>
+      
+      <br>
+      <button onclick="location.href='menu.html'" style="background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 18px; width: 100%; max-width: 400px; font-weight: bold; cursor: pointer;">กลับหน้าเมนู</button>
+    </div>
   `;
 
-  const res = await fetch("/api/ranking");
-  const ranking = await res.json();
+  try {
+    const res = await fetch("/api/ranking");
+    const ranking = await res.json(); 
 
-  const rankingDiv = document.getElementById("ranking");
+    const rankingList = document.getElementById("rankingList");
+    rankingList.innerHTML = `<h3 style="text-align: left; max-width: 400px; margin: 15px auto; color: #555;">🏆 อันดับผู้เล่นสูงสุด</h3>`;
 
-  ranking.forEach((player, index) => {
+    ranking.forEach((player, index) => {
+      const box = document.createElement("div");
+      box.className = "rank-item";
+      
+      const isMe = (player.name === name);
 
-    const box = document.createElement("div");
-    box.style.border = "1px solid #ccc";
-    box.style.margin = "10px auto";
-    box.style.padding = "15px";
-    box.style.width = "300px";
-    box.style.borderRadius = "10px";
-    box.style.background = index === 0 ? "#ffd700" : "#fff";
+      if (isMe) {
+        box.classList.add("my-rank-box");
+      } else if (index === 0) {
+        box.style.background = "#ffd700"; 
+        box.style.borderColor = "#fbc02d";
+      }
 
-    box.innerHTML = `
-      <strong>#${index + 1}</strong><br>
-      ${player.name}<br>
-      คะแนนสูงสุด: ${player.score}
-    `;
+      box.innerHTML = `
+        <div style="text-align: left;">
+          <span class="rank-number">#${index + 1}</span>
+          <span style="margin-left: 15px; font-size: 18px; font-weight: ${isMe ? 'bold' : 'normal'};">
+            ${player.name} ${isMe ? "(คุณ)" : ""}
+          </span>
+        </div>
+        <div style="font-weight: bold; font-size: 18px; color: #1a73e8;">${player.score} แต้ม</div>
+      `;
+      rankingList.appendChild(box);
+    });
 
-    rankingDiv.appendChild(box);
-  });
+  } catch (error) {
+    console.error("Error:", error);
+    document.getElementById("rankingList").innerHTML = "<p>ไม่สามารถโหลดข้อมูลอันดับได้</p>";
+  }
 }
 
-/* 🔥 ควบคุมด้วยคีย์บอร์ด */
+/* 🔥 ระบบควบคุมด้วยคีย์บอร์ด */
 document.addEventListener("keydown", function(e){
-
   const buttons = document.querySelectorAll("#options button");
   if(buttons.length === 0) return;
 
@@ -202,20 +246,16 @@ document.addEventListener("keydown", function(e){
     selectedIndex = (selectedIndex + 1) % buttons.length;
     updateSelection();
   }
-
   else if(e.key === "ArrowUp"){
     selectedIndex = (selectedIndex - 1 + buttons.length) % buttons.length;
     updateSelection();
   }
-
   else if(e.key === "Enter"){
-    buttons[selectedIndex].click();
+    if(buttons[selectedIndex]) buttons[selectedIndex].click();
   }
-
 });
 
 loadQuestion();
-
 </script>
 </body>
 </html>
