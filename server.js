@@ -17,25 +17,30 @@ const PIXABAY_KEY = "54726244-0fc3b5ea4b3d82698fc5045b0";
 
 const CATEGORY_FILE = "categories.json";
 const SCORE_FILE = "scores.json";
+const USER_FILE = "users.json"; // 📦 ไฟล์เก็บข้อมูลสมาชิก
 
 const defaultData = {
   animal: ["cat","dog","elephant","tiger","lion","horse","cow","pig","rabbit","monkey"],
   fruit: ["apple","banana","mango","orange","grape","pineapple","watermelon","lemon","kiwi","cherry"]
 };
 
-// โหลดข้อมูลหมวดหมู่
-let data = defaultData;
-if (fs.existsSync(CATEGORY_FILE)) {
-  data = JSON.parse(fs.readFileSync(CATEGORY_FILE));
-} else {
-  fs.writeFileSync(CATEGORY_FILE, JSON.stringify(defaultData, null, 2));
+// ฟังก์ชันช่วยโหลด JSON แบบปลอดภัย (ป้องกันไฟล์ว่างแล้ว Error)
+function loadJSON(filePath, defaultValue = {}) {
+  if (fs.existsSync(filePath)) {
+    const content = fs.readFileSync(filePath, "utf8");
+    return content.trim() ? JSON.parse(content) : defaultValue;
+  }
+  return defaultValue;
 }
 
-// โหลดคะแนนสูงสุด
-let highScores = {};
-if (fs.existsSync(SCORE_FILE)) {
-  highScores = JSON.parse(fs.readFileSync(SCORE_FILE));
-}
+// โหลดข้อมูลทั้งหมดเข้าสู่ระบบ
+let data = loadJSON(CATEGORY_FILE, defaultData);
+let highScores = loadJSON(SCORE_FILE, {});
+let users = loadJSON(USER_FILE, {}); // โหลดรายชื่อสมาชิก
+
+// สร้างไฟล์เริ่มต้นถ้ายังไม่มี
+if (!fs.existsSync(CATEGORY_FILE)) fs.writeFileSync(CATEGORY_FILE, JSON.stringify(defaultData, null, 2));
+if (!fs.existsSync(USER_FILE)) fs.writeFileSync(USER_FILE, JSON.stringify({}, null, 2));
 
 const players = {};
 
@@ -80,23 +85,44 @@ async function generateImage(keyword, category){
 
 /* ========================= ROUTES ========================= */
 
-app.get("/api/categories", (req, res) => {
-  res.json(Object.keys(data));
+// 📝 API สำหรับลงทะเบียนสมาชิกใหม่
+app.post("/api/register", (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: "กรุณากรอกข้อมูลให้ครบ" });
+
+  const name = username.trim();
+  // รีโหลดข้อมูลจากไฟล์เพื่อให้แน่ใจว่าเป็นข้อมูลล่าสุด
+  users = loadJSON(USER_FILE, {});
+
+  if (users[name]) return res.status(400).json({ error: "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว" });
+
+  users[name] = { password: password };
+  fs.writeFileSync(USER_FILE, JSON.stringify(users, null, 2));
+  res.json({ message: "ลงทะเบียนสำเร็จ" });
 });
 
-app.get("/api/all-data", (req, res) => {
-  res.json(data);
+// 🔑 API สำหรับ Login (ตรวจสอบจาก users.json เท่านั้น)
+app.post("/api/login", (req, res) => {
+  const { username, password } = req.body;
+  users = loadJSON(USER_FILE, {}); // ดึงข้อมูลล่าสุดจากไฟล์
+
+  const user = users[username];
+  if (user && user.password === password) {
+    res.json({ message: "เข้าสู่ระบบสำเร็จ", username });
+  } else {
+    res.status(401).json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
+  }
 });
 
-// ดึงข้อมูล Ranking ทั้งหมด
+// API หมวดหมู่และ Ranking
+app.get("/api/categories", (req, res) => res.json(Object.keys(data)));
+app.get("/api/all-data", (req, res) => res.json(data));
 app.get("/api/ranking", (req, res) => {
-  // แปลง Object เป็น Array และเรียงลำดับจากมากไปน้อย
   const rankingArray = Object.keys(highScores).map(name => ({
     name: name,
     score: highScores[name]
   })).sort((a, b) => b.score - a.score);
-  
-  res.json(rankingArray.slice(0, 10)); // ส่งไปแค่ 10 อันดับแรก
+  res.json(rankingArray.slice(0, 10));
 });
 
 app.post("/api/category", (req, res) => {
@@ -110,13 +136,12 @@ app.post("/api/category", (req, res) => {
   res.json({ message: "เพิ่มหมวดหมู่สำเร็จ", categories: Object.keys(data) });
 });
 
+// ระบบเกม
 app.post("/api/start", (req, res) => {
   const { name, category } = req.body;
   if (!data[category]) return res.status(400).json({ error: "Invalid category" });
 
-  // รีเฟรช highScores จากไฟล์เพื่อให้ข้อมูลล่าสุดเสมอ
-  if (fs.existsSync(SCORE_FILE)) highScores = JSON.parse(fs.readFileSync(SCORE_FILE));
-
+  highScores = loadJSON(SCORE_FILE, {});
   players[name] = {
     score: 0,
     wrong: 0,
@@ -154,7 +179,6 @@ app.post("/api/answer/:name", (req, res) => {
     player.wrong++; 
   }
 
-  // อัปเดตคะแนนสูงสุดในระบบและบันทึกลงไฟล์
   if (player.score > player.highScore) {
     player.highScore = player.score;
     highScores[name] = player.score;

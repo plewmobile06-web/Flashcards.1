@@ -1,112 +1,175 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <title>Login - AI Quiz Game</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
-        body { 
-            margin: 0; 
-            height: 100vh; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            font-family: 'Kanit', sans-serif; 
-            background: #f0f2f5; 
-        }
-        .card { 
-            background: white; 
-            padding: 40px; 
-            border-radius: 25px; 
-            width: 350px; 
-            text-align: center; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
-        }
-        h1 { color: #1a73e8; margin-bottom: 25px; }
-        input { 
-            width: 100%; 
-            padding: 12px; 
-            margin: 10px 0; 
-            border-radius: 10px; 
-            border: 1px solid #ddd; 
-            box-sizing: border-box; 
-            font-size: 16px; 
-        }
-        button { 
-            width: 100%; 
-            padding: 12px; 
-            background: #1a73e8; 
-            color: white; 
-            border: none; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            font-size: 18px; 
-            font-weight: bold; 
-            transition: 0.3s; 
-        }
-        button:hover { background: #1557b0; }
-    </style>
+<meta charset="UTF-8">
+<title>เข้าสู่ระบบ - FlashAI</title>
+
+<style>
+/* ใช้ Font Kanit เพื่อความสวยงาม */
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Kanit', sans-serif;
+  background: #f0f2f5;
+}
+
+.card {
+  background: white;
+  padding: 40px;
+  border-radius: 25px;
+  width: 320px;
+  text-align: center;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+h2 {
+  margin-bottom: 20px;
+  color: #1a73e8;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  box-sizing: border-box;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  background: #4CAF50;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #45a049;
+  transform: translateY(-2px);
+}
+
+.register-link {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #666;
+}
+
+.register-link a {
+  color: #1a73e8;
+  text-decoration: none;
+  font-weight: bold;
+}
+</style>
 </head>
+
 <body>
 
 <div class="card">
-    <h1>Login</h1>
-    <form id="loginForm">
-        <input type="text" id="name" placeholder="ชื่อผู้เล่น (Username)" required autocomplete="off">
-        <input type="password" id="password" placeholder="รหัสผ่าน (Password)" required>
-        <button type="submit">เข้าสู่เกม</button>
-    </form>
+  <h2>เข้าสู่ระบบ</h2>
+
+  <form id="loginForm">
+    <input id="name" placeholder="ชื่อผู้ใช้" required autocomplete="username">
+    <input id="password" type="password" placeholder="รหัสผ่าน" required autocomplete="current-password">
+    <button type="submit">เข้าสู่ระบบ</button>
+  </form>
+
+  <div class="register-link">
+    ยังไม่มีบัญชี? <a href="register.html">ลงทะเบียนที่นี่</a>
+  </div>
 </div>
 
 <script>
-    const nameInput = document.getElementById("name");
-    const loginForm = document.getElementById("loginForm");
+const form = document.getElementById("loginForm");
+const nameInput = document.getElementById("name");
+const passwordInput = document.getElementById("password");
 
-    /* ✨ ระบบ Auto-Capitalize (ตัวแรก/หลังเว้นวรรค เป็นตัวใหญ่) */
-    let isShiftPressed = false;
+/* ✨ ระบบ Auto-Capitalize และ Enter ย้ายช่อง */
+let isShiftPressed = false;
 
-    nameInput.addEventListener("keydown", (e) => {
-        if (e.key === "Shift") isShiftPressed = true;
-    });
-
-    nameInput.addEventListener("keyup", (e) => {
-        if (e.key === "Shift") isShiftPressed = false;
-    });
-
-    nameInput.addEventListener("input", function(e) {
-        let cursorStart = this.selectionStart;
-        let val = this.value;
-        let lastCharIndex = cursorStart - 1;
-        
-        if (lastCharIndex >= 0) {
-            let isFirstChar = (lastCharIndex === 0);
-            let isAfterSpace = (val.charAt(lastCharIndex - 1) === " ");
-
-            // ถ้าเป็นตัวแรก หรือหลังเว้นวรรค และไม่ได้กด Shift ให้เป็นตัวใหญ่
-            if ((isFirstChar || isAfterSpace) && !isShiftPressed) {
-                let char = val.charAt(lastCharIndex);
-                this.value = val.slice(0, lastCharIndex) + char.toUpperCase() + val.slice(cursorStart);
-                this.setSelectionRange(cursorStart, cursorStart);
-            }
-        }
-    });
-
-    /* 🔥 ฟังก์ชันส่งข้อมูล */
-    loginForm.addEventListener("submit", function(e) {
+nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Shift") isShiftPressed = true;
+    if (e.key === "Enter") {
         e.preventDefault();
-        const nameValue = nameInput.value.trim();
-        const passwordValue = document.getElementById("password").value;
+        passwordInput.focus();
+    }
+});
 
-        if(nameValue && passwordValue) {
-            // เก็บข้อมูลลง LocalStorage ทั้งสองรูปแบบเพื่อรองรับทุกหน้า
-            localStorage.setItem("name", nameValue);
-            localStorage.setItem("password", passwordValue);
-            localStorage.setItem("playerName", nameValue);
-            localStorage.setItem("playerPass", passwordValue);
+nameInput.addEventListener("keyup", (e) => {
+    if (e.key === "Shift") isShiftPressed = false;
+});
 
-            location.href = "menu.html"; 
+nameInput.addEventListener("input", function(e) {
+    let cursorStart = this.selectionStart;
+    let val = this.value;
+    let lastCharIndex = cursorStart - 1;
+    
+    if (lastCharIndex >= 0) {
+        let isFirstChar = (lastCharIndex === 0);
+        let isAfterSpace = (val.charAt(lastCharIndex - 1) === " ");
+
+        if ((isFirstChar || isAfterSpace) && !isShiftPressed) {
+            let char = val.charAt(lastCharIndex);
+            this.value = val.slice(0, lastCharIndex) + char.toUpperCase() + val.slice(cursorStart);
+            this.setSelectionRange(cursorStart, cursorStart);
         }
-    });
+    }
+});
+
+/* 🔥 ระบบตรวจสอบข้อมูลกับ Server */
+form.addEventListener("submit", async function(e){
+    e.preventDefault();
+
+    const username = nameInput.value.trim();
+    const password = passwordInput.value;
+
+    if(!username || !password){
+        alert("กรอกข้อมูลให้ครบ");
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // เก็บข้อมูลลง LocalStorage เพื่อใช้ในหน้า menu.html และ game.html
+            localStorage.setItem("name", data.username);
+            localStorage.setItem("playerName", data.username);
+            
+            // ย้ายหน้าไปที่เมนู
+            location.href = "menu.html";
+        } else {
+            alert(data.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+        }
+    } catch (err) {
+        console.error("Login Error:", err);
+        alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่ารัน server.js อยู่หรือไม่");
+    }
+});
+
+/* กัน Space ในช่องรหัสผ่าน */
+passwordInput.addEventListener("input", function(){
+    this.value = this.value.replace(/\s/g, "");
+});
 </script>
+
 </body>
 </html>

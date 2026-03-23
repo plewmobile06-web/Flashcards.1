@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ลงทะเบียน - FlashAI</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+        body { 
+            margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; 
+            font-family: 'Kanit', sans-serif; background: #f0f2f5; 
+        }
+        .card { 
+            background: white; padding: 40px; border-radius: 25px; width: 350px; 
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+        }
+        h1 { color: #1a73e8; margin-bottom: 25px; }
+        input { 
+            width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; 
+            border: 1px solid #ddd; box-sizing: border-box; font-size: 16px;
+        }
+        button { 
+            width: 100%; padding: 12px; background: #1a73e8; color: white; 
+            border: none; border-radius: 10px; cursor: pointer; font-size: 16px; 
+            margin-top: 10px; font-weight: bold; transition: 0.3s;
+        }
+        button:hover { background: #1557b0; }
+        .link { margin-top: 20px; font-size: 14px; color: #666; }
+        .link a { color: #1a73e8; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>ลงทะเบียน</h1>
+        <form id="registerForm">
+            <input type="text" id="username" placeholder="ชื่อผู้ใช้งาน" required autocomplete="off">
+            <input type="password" id="password" placeholder="รหัสผ่าน" required>
+            <button type="submit">สมัครสมาชิก</button>
+        </form>
+        <div class="link">
+            มีบัญชีอยู่แล้ว? <a href="index.html">เข้าสู่ระบบ</a>
+        </div>
+    </div>
+
+    <script>
+        const registerForm = document.getElementById("registerForm");
+        const usernameInput = document.getElementById("username");
+        const passwordInput = document.getElementById("password");
+
+        // ✨ ระบบ Enter เพื่อข้ามไปช่องรหัสผ่าน
+        usernameInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                passwordInput.focus();
+            }
+        });
+
+        // ✨ กันการพิมพ์ Space (เว้นวรรค)
+        [usernameInput, passwordInput].forEach(input => {
+            input.addEventListener("input", function() {
+                this.value = this.value.replace(/\s/g, "");
+            });
+        });
+
+        // 🔥 ส่งข้อมูลลงทะเบียน
+        registerForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            try {
+                const res = await fetch("/api/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert("ลงทะเบียนสำเร็จ! กำลังไปหน้าเข้าสู่ระบบ");
+                    window.location.href = "index.html"; // เปลี่ยนเป็น index.html ให้ตรงกับหน้าหลัก
+                } else {
+                    alert(data.error || "เกิดข้อผิดพลาด");
+                }
+            } catch (err) {
+                alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+            }
+        });
+    </script>
+</body>
+</html>
