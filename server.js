@@ -17,14 +17,16 @@ const PIXABAY_KEY = "54726244-0fc3b5ea4b3d82698fc5045b0";
 
 const CATEGORY_FILE = "categories.json";
 const SCORE_FILE = "scores.json";
-const USER_FILE = "users.json"; // 📦 ไฟล์เก็บข้อมูลสมาชิก
+const USER_FILE = "users.json"; 
 
 const defaultData = {
   animal: ["cat","dog","elephant","tiger","lion","horse","cow","pig","rabbit","monkey"],
   fruit: ["apple","banana","mango","orange","grape","pineapple","watermelon","lemon","kiwi","cherry"]
 };
 
-// ฟังก์ชันช่วยโหลด JSON แบบปลอดภัย (ป้องกันไฟล์ว่างแล้ว Error)
+// ⚡ ระบบ Image Cache เพื่อเก็บ URL รูปที่เคยดึงมาแล้ว ไม่ต้องเรียก API ซ้ำ
+const imageCache = {};
+
 function loadJSON(filePath, defaultValue = {}) {
   if (fs.existsSync(filePath)) {
     const content = fs.readFileSync(filePath, "utf8");
@@ -33,12 +35,10 @@ function loadJSON(filePath, defaultValue = {}) {
   return defaultValue;
 }
 
-// โหลดข้อมูลทั้งหมดเข้าสู่ระบบ
 let data = loadJSON(CATEGORY_FILE, defaultData);
 let highScores = loadJSON(SCORE_FILE, {});
-let users = loadJSON(USER_FILE, {}); // โหลดรายชื่อสมาชิก
+let users = loadJSON(USER_FILE, {});
 
-// สร้างไฟล์เริ่มต้นถ้ายังไม่มี
 if (!fs.existsSync(CATEGORY_FILE)) fs.writeFileSync(CATEGORY_FILE, JSON.stringify(defaultData, null, 2));
 if (!fs.existsSync(USER_FILE)) fs.writeFileSync(USER_FILE, JSON.stringify({}, null, 2));
 
@@ -58,7 +58,15 @@ function randomOptions(correct, arr){
 }
 
 async function generateImage(keyword, category){
+  // 1. ตรวจสอบใน Cache ก่อน ถ้ามีให้ส่งคืนทันที (เร็วที่สุด)
+  const cacheKey = `${category}_${keyword}`.toLowerCase();
+  if (imageCache[cacheKey]) {
+    console.log(`🚀 [Cache Hit] ${keyword}`);
+    return imageCache[cacheKey];
+  }
+
   try {
+    console.log(`🌐 [Fetching API] ${keyword}`);
     const query = `"${keyword}" ${category}`;
     const res = await axios.get("https://pixabay.com/api/", {
       params: {
@@ -67,7 +75,8 @@ async function generateImage(keyword, category){
         image_type: "photo",
         safesearch: true,
         per_page: 20
-      }
+      },
+      timeout: 5000 // ⏳ ตั้งเวลาคอยแค่ 5 วินาที ถ้า API ช้าให้ Error ทันทีเพื่อไปใช้รูปสำรอง
     });
 
     if (res.data.hits && res.data.hits.length > 0) {
@@ -75,23 +84,26 @@ async function generateImage(keyword, category){
         img.tags.toLowerCase().includes(keyword.toLowerCase())
       );
       const pool = filtered.length > 0 ? filtered : res.data.hits;
-      return pool[Math.floor(Math.random() * pool.length)].webformatURL;
+      const imageUrl = pool[Math.floor(Math.random() * pool.length)].webformatURL;
+      
+      // เก็บลง Cache ไว้ใช้ครั้งต่อไป
+      imageCache[cacheKey] = imageUrl;
+      return imageUrl;
     }
     return `https://via.placeholder.com/400?text=${keyword}`;
   } catch (error) {
+    console.error(`❌ Error fetching image for ${keyword}:`, error.message);
     return `https://via.placeholder.com/400?text=${keyword}`;
   }
 }
 
 /* ========================= ROUTES ========================= */
 
-// 📝 API สำหรับลงทะเบียนสมาชิกใหม่
 app.post("/api/register", (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "กรุณากรอกข้อมูลให้ครบ" });
 
   const name = username.trim();
-  // รีโหลดข้อมูลจากไฟล์เพื่อให้แน่ใจว่าเป็นข้อมูลล่าสุด
   users = loadJSON(USER_FILE, {});
 
   if (users[name]) return res.status(400).json({ error: "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว" });
@@ -101,10 +113,9 @@ app.post("/api/register", (req, res) => {
   res.json({ message: "ลงทะเบียนสำเร็จ" });
 });
 
-// 🔑 API สำหรับ Login (ตรวจสอบจาก users.json เท่านั้น)
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
-  users = loadJSON(USER_FILE, {}); // ดึงข้อมูลล่าสุดจากไฟล์
+  users = loadJSON(USER_FILE, {}); 
 
   const user = users[username];
   if (user && user.password === password) {
@@ -114,7 +125,6 @@ app.post("/api/login", (req, res) => {
   }
 });
 
-// API หมวดหมู่และ Ranking
 app.get("/api/categories", (req, res) => res.json(Object.keys(data)));
 app.get("/api/all-data", (req, res) => res.json(data));
 app.get("/api/ranking", (req, res) => {
@@ -136,7 +146,6 @@ app.post("/api/category", (req, res) => {
   res.json({ message: "เพิ่มหมวดหมู่สำเร็จ", categories: Object.keys(data) });
 });
 
-// ระบบเกม
 app.post("/api/start", (req, res) => {
   const { name, category } = req.body;
   if (!data[category]) return res.status(400).json({ error: "Invalid category" });
@@ -158,6 +167,8 @@ app.get("/api/question/:name", async (req, res) => {
 
   const items = data[player.category];
   const correct = randomItem(items);
+  
+  // เรียกใช้ฟังก์ชันที่มีระบบ Cache และ Timeout
   const image = await generateImage(correct, player.category);
   const options = randomOptions(correct, items);
 
@@ -196,8 +207,6 @@ app.post("/api/answer/:name", (req, res) => {
     highScore: player.highScore 
   });
 });
-
-/* ========================= START SERVER ========================= */
 
 app.listen(3000, () => {
   console.log("✅ Server running on http://localhost:3000");
