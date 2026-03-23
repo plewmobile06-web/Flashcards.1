@@ -150,18 +150,18 @@ form.addEventListener("submit", async function(e){
         const data = await response.json();
 
         if (response.ok) {
-            // เก็บข้อมูลลง LocalStorage เพื่อใช้ในหน้า menu.html และ game.html
+            // เก็บข้อมูลลง LocalStorage
             localStorage.setItem("name", data.username);
             localStorage.setItem("playerName", data.username);
             
-            // ย้ายหน้าไปที่เมนู
+            // ✅ ย้ายไปหน้าเมนู
             location.href = "menu.html";
         } else {
             alert(data.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
         }
     } catch (err) {
         console.error("Login Error:", err);
-        alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่ารัน server.js อยู่หรือไม่");
+        alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
     }
 });
 
