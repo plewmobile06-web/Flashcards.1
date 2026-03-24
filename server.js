@@ -173,21 +173,34 @@ app.post("/api/category/add-word", (req, res) => {
 
 /* ========================= DELETE CATEGORY ROUTE ========================= */
 
+/* ========================= DELETE CATEGORY ROUTE ========================= */
+
 app.delete("/api/category/:name", (req, res) => {
-    const catName = req.params.name.toLowerCase();
+    // 1. รับชื่อที่ส่งมาจาก Frontend (อาจจะเป็นตัวเล็กหรือใหญ่ก็ได้)
+    const targetName = req.params.name.trim().toLowerCase();
     
-    // ป้องกันการลบหมวดหมู่พื้นฐาน (Optional)
-    const protectedCategories = ["animal", "fruit"];
-    if (protectedCategories.includes(catName)) {
+    // 2. ป้องกันการลบหมวดหมู่เริ่มต้น (ตรวจสอบทั้งเอกพจน์/พหูพจน์ และตัวเล็กทั้งหมด)
+    const protectedCategories = ["animal", "animals", "fruit", "fruits"];
+    if (protectedCategories.includes(targetName)) {
         return res.status(403).json({ error: "ไม่สามารถลบหมวดหมู่เริ่มต้นได้" });
     }
 
-    if (data[catName]) {
-        delete data[catName];
+    // 3. ค้นหาคีย์จริงๆ ใน Object 'data' (เช่น หา "Occupations" จากคำค้น "occupations")
+    const actualKey = Object.keys(data).find(
+        key => key.toLowerCase() === targetName
+    );
+
+    if (actualKey) {
+        // 4. ลบหมวดหมู่
+        delete data[actualKey];
+        
+        // 5. บันทึกลงไฟล์ categories.json
         fs.writeFileSync(CATEGORY_FILE, JSON.stringify(data, null, 2));
+        console.log(`🗑️ Deleted category: ${actualKey}`);
+        
         res.json({ message: "ลบหมวดหมู่สำเร็จ" });
     } else {
-        res.status(404).json({ error: "ไม่พบหมวดหมู่" });
+        res.status(404).json({ error: "ไม่พบหมวดหมู่ที่ต้องการลบ" });
     }
 });
 

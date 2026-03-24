@@ -74,9 +74,10 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            font-size: 12px;
+            width: 26px;
+            height: 26px;
+            font-size: 14px;
+            font-weight: bold;
             cursor: pointer;
             display: flex;
             justify-content: center;
@@ -101,6 +102,7 @@
             display: flex;
             align-items: center;
             gap: 3px;
+            padding: 5px;
         }
         .tool-btn:hover { color: #2b78e4; }
 
@@ -117,7 +119,6 @@
 
         .hint-text { color: #999; font-size: 14px; margin-bottom: 20px; }
 
-        /* Modal Styles */
         #modal {
             display: none; position: fixed; top:0; left:0; width:100%; height:100%;
             background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
@@ -150,7 +151,9 @@
 <script>
     let fullData = {};
     const playerName = localStorage.getItem("name") || "Guest";
-    const protectedCategories = ["fruits", "animals", "occupations", "fruit", "animal"]; 
+    
+    // ตั้งค่าหมวดหมู่ที่ห้ามลบ (เฉพาะ animals และ fruits)
+    const protectedCategories = ["animals", "fruits", "animal", "fruit"]; 
 
     document.getElementById("userInfo").innerText = `ผู้เล่น: ${playerName}`;
 
@@ -177,11 +180,12 @@
             btn.innerText = cat.toUpperCase();
             btn.onclick = () => startGame(cat);
 
-            // ปุ่มลบ
+            // แสดงปุ่มลบ เฉพาะหมวดหมู่ที่ไม่อยู่ในรายการที่ปกป้องไว้
             if (!protectedCategories.includes(cat.toLowerCase())) {
                 const delBtn = document.createElement("button");
                 delBtn.className = "delete-btn";
                 delBtn.innerHTML = "×";
+                delBtn.title = "ลบหมวดหมู่";
                 delBtn.onclick = (e) => {
                     e.stopPropagation();
                     deleteCategory(cat);
@@ -202,7 +206,19 @@
         });
     }
 
-    // --- ส่วนการเพิ่มคำศัพท์ (จุดที่แก้ไข) ---
+    async function deleteCategory(cat) {
+        if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่ "${cat.toUpperCase()}"?`)) return;
+        try {
+            const res = await fetch(`/api/category/${cat}`, { method: "DELETE" });
+            if (res.ok) {
+                loadData();
+            } else {
+                alert("ไม่สามารถลบหมวดหมู่นี้ได้");
+            }
+        } catch (err) {
+            console.error("Delete error:", err);
+        }
+    }
 
     function openAddWordModal(cat) {
         const modal = document.getElementById("modal");
@@ -210,15 +226,13 @@
         modal.style.display = "flex";
         content.innerHTML = `
             <h3 style="margin-top:0;">เพิ่มคำในหมวด ${cat.toUpperCase()}</h3>
-            <input type="text" id="newWordInput" class="input-style" placeholder="พิมพ์คำศัพท์ภาษาอังกฤษ..." autocomplete="off">
+            <input type="text" id="newWordInput" class="input-style" placeholder="พิมพ์คำศัพท์..." autocomplete="off">
             <p id="errorMsg" style="color:red; font-size:13px; display:none; margin: -5px 0 10px 5px;">⚠️ คำนี้มีอยู่ในหมวดนี้แล้ว!</p>
             <button class="btn-save" onclick="saveNewWord('${cat}')">บันทึกคำศัพท์</button>
             <button class="btn-close" onclick="closeModal()">ยกเลิก</button>
         `;
-        
         const input = document.getElementById("newWordInput");
         input.focus();
-        // กด Enter เพื่อบันทึก
         input.onkeydown = (e) => { if(e.key === "Enter") saveNewWord(cat); };
     }
 
@@ -227,30 +241,24 @@
         const word = input.value.trim();
         if(!word) return;
 
-        try {
-            const res = await fetch("/api/category/add-word", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ categoryName: cat, word: word })
-            });
+        const res = await fetch("/api/category/add-word", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ categoryName: cat, word: word })
+        });
 
-            const result = await res.json();
-            if(res.ok) {
-                closeModal();
-                loadData(); 
+        if(res.ok) {
+            closeModal();
+            loadData(); 
+        } else {
+            const err = await res.json();
+            if(err.error && err.error.includes("มีคำศัพท์นี้")) {
+                document.getElementById("errorMsg").style.display = "block";
             } else {
-                if(result.error.includes("มีคำศัพท์นี้")) {
-                    document.getElementById("errorMsg").style.display = "block";
-                } else {
-                    alert(result.error);
-                }
+                alert(err.error);
             }
-        } catch (err) {
-            alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
         }
     }
-
-    // --- ฟังก์ชันอื่นๆ ---
 
     function viewWords(cat) {
         const modal = document.getElementById("modal");
@@ -262,12 +270,6 @@
             <div style="margin-bottom:20px; background:#f9f9f9; padding:15px; border-radius:15px; max-height:300px; overflow-y:auto;">${chips}</div>
             <button class="btn-close" onclick="closeModal()">ปิดหน้าต่าง</button>
         `;
-    }
-
-    async function deleteCategory(cat) {
-        if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่ "${cat.toUpperCase()}"?`)) return;
-        const res = await fetch(`/api/category/${cat}`, { method: "DELETE" });
-        if (res.ok) loadData();
     }
 
     function openCreateModal() {
