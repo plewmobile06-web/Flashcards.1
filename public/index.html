@@ -9,96 +9,125 @@
 @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
 
 body {
-  margin: 0;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-family: 'Kanit', sans-serif;
-  background: #f0f2f5;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Kanit', sans-serif;
+    background: #f0f2f5;
 }
 
 .card {
-  background: white;
-  padding: 40px;
-  border-radius: 25px;
-  width: 320px;
-  text-align: center;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    background: white;
+    padding: 40px;
+    border-radius: 25px;
+    width: 320px;
+    text-align: center;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
 }
 
 h2 {
-  margin-bottom: 20px;
-  color: #1a73e8;
+    margin-bottom: 20px;
+    color: #1a73e8;
 }
 
 input {
-  width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  font-size: 16px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
-  box-sizing: border-box;
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
 }
 
 button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  font-size: 16px;
-  border: none;
-  border-radius: 10px;
-  background: #4CAF50;
-  color: white;
-  cursor: pointer;
-  font-weight: bold;
-  transition: 0.3s;
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
 }
 
 button:hover {
-  background: #45a049;
-  transform: translateY(-2px);
+    background: #45a049;
+    transform: translateY(-2px);
 }
 
 .register-link {
-  margin-top: 20px;
-  font-size: 14px;
-  color: #666;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #666;
 }
 
 .register-link a {
-  color: #1a73e8;
-  text-decoration: none;
-  font-weight: bold;
+    color: #1a73e8;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+/* แถบแจ้งเตือนสถานะ Offline */
+#offlineBanner {
+    display: none;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: #ff9800;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+    z-index: 1001;
 }
 </style>
 </head>
 
 <body>
 
+<div id="offlineBanner">คุณกำลังใช้งานในโหมดออฟไลน์ (เข้าสู่ระบบได้เฉพาะบัญชีที่เคยบันทึกไว้)</div>
+
 <div class="card">
-  <h2>เข้าสู่ระบบ</h2>
+    <h2>เข้าสู่ระบบ</h2>
 
-  <form id="loginForm">
-    <input id="name" placeholder="ชื่อผู้ใช้" required autocomplete="username">
-    <input id="password" type="password" placeholder="รหัสผ่าน" required autocomplete="current-password">
-    <button type="submit">เข้าสู่ระบบ</button>
-  </form>
+    <form id="loginForm">
+        <input id="name" placeholder="ชื่อผู้ใช้" required autocomplete="username">
+        <input id="password" type="password" placeholder="รหัสผ่าน" required autocomplete="current-password">
+        <button type="submit">เข้าสู่ระบบ</button>
+    </form>
 
-  <div class="register-link">
-    ยังไม่มีบัญชี? <a href="register.html">ลงทะเบียนที่นี่</a>
-  </div>
+    <div class="register-link">
+        ยังไม่มีบัญชี? <a href="register.html">ลงทะเบียนที่นี่</a>
+    </div>
 </div>
 
 <script>
+/* 📡 1. ลงทะเบียน Service Worker สำหรับ Offline Mode */
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW Registered'))
+            .catch(err => console.log('SW Failed', err));
+    });
+}
+
+// ตรวจสอบสถานะเน็ตเพื่อแสดง Banner
+window.addEventListener('online', () => document.getElementById('offlineBanner').style.display = 'none');
+window.addEventListener('offline', () => document.getElementById('offlineBanner').style.display = 'block');
+if (!navigator.onLine) document.getElementById('offlineBanner').style.display = 'block';
+
 const form = document.getElementById("loginForm");
 const nameInput = document.getElementById("name");
 const passwordInput = document.getElementById("password");
 
 /* ✨ ระบบ Auto-Capitalize และ Enter ย้ายช่อง */
 let isShiftPressed = false;
-
 nameInput.addEventListener("keydown", (e) => {
     if (e.key === "Shift") isShiftPressed = true;
     if (e.key === "Enter") {
@@ -106,20 +135,16 @@ nameInput.addEventListener("keydown", (e) => {
         passwordInput.focus();
     }
 });
-
 nameInput.addEventListener("keyup", (e) => {
     if (e.key === "Shift") isShiftPressed = false;
 });
-
 nameInput.addEventListener("input", function(e) {
     let cursorStart = this.selectionStart;
     let val = this.value;
     let lastCharIndex = cursorStart - 1;
-    
     if (lastCharIndex >= 0) {
         let isFirstChar = (lastCharIndex === 0);
         let isAfterSpace = (val.charAt(lastCharIndex - 1) === " ");
-
         if ((isFirstChar || isAfterSpace) && !isShiftPressed) {
             let char = val.charAt(lastCharIndex);
             this.value = val.slice(0, lastCharIndex) + char.toUpperCase() + val.slice(cursorStart);
@@ -128,7 +153,7 @@ nameInput.addEventListener("input", function(e) {
     }
 });
 
-/* 🔥 ระบบตรวจสอบข้อมูลกับ Server */
+/* 🔥 ระบบตรวจสอบข้อมูลกับ Server + Offline Fallback */
 form.addEventListener("submit", async function(e){
     e.preventDefault();
 
@@ -150,20 +175,38 @@ form.addEventListener("submit", async function(e){
         const data = await response.json();
 
         if (response.ok) {
-            // เก็บข้อมูลลง LocalStorage
-            localStorage.setItem("name", data.username);
-            localStorage.setItem("playerName", data.username);
-            
-            // ✅ ย้ายไปหน้าเมนู
-            location.href = "menu.html";
+            loginSuccess(data.username, password);
         } else {
             alert(data.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
         }
     } catch (err) {
-        console.error("Login Error:", err);
-        alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+        // 📴 กรณี Offline: ตรวจสอบข้อมูลจาก LocalStorage (เฉพาะคนที่เคย Login สำเร็จมาก่อน)
+        console.log("Offline Login Attempt...");
+        const localUser = localStorage.getItem("saved_user_" + username);
+        
+        if (localUser) {
+            const userData = JSON.parse(localUser);
+            if (userData.password === password) {
+                loginSuccess(username, password);
+            } else {
+                alert("รหัสผ่านไม่ถูกต้อง (โหมดออฟไลน์)");
+            }
+        } else {
+            alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ และไม่พบข้อมูลบัญชีนี้ในเครื่อง");
+        }
     }
 });
+
+function loginSuccess(username, password) {
+    // เก็บข้อมูลลง LocalStorage เพื่อใช้ในหน้าอื่นๆ
+    localStorage.setItem("name", username);
+    localStorage.setItem("playerName", username);
+    
+    // บันทึกข้อมูลรหัสผ่านไว้ในเครื่องสำหรับเล่น Offline ครั้งหน้า (ความปลอดภัยระดับเริ่มต้น)
+    localStorage.setItem("saved_user_" + username, JSON.stringify({ username, password }));
+    
+    location.href = "menu.html";
+}
 
 /* กัน Space ในช่องรหัสผ่าน */
 passwordInput.addEventListener("input", function(){

@@ -46,6 +46,7 @@
             position: relative;
         }
 
+        /* ปุ่มสีฟ้าหลัก */
         .cat-btn {
             padding: 12px 35px;
             border: 2px solid transparent; 
@@ -57,13 +58,18 @@
             cursor: pointer;
             transition: 0.3s;
             min-width: 120px;
+            user-select: none; /* กันการคลุมดำตัวอักษรเวลาใช้คีย์บอร์ด */
+            -webkit-user-select: none;
+            outline: none;
         }
 
-        .cat-btn:hover, .cat-btn:focus { 
-            background: #d2e3fc; 
-            transform: translateY(-2px); 
-            border-color: #2b78e4;
-            outline: none;
+        /* เอฟเฟกต์เมื่อปุ่มสีฟ้าถูกเลือกด้วยลูกศร (เพิ่ม keyboard-selected) */
+        .cat-btn:hover, .cat-btn.keyboard-selected { 
+            background: #2b78e4 !important; 
+            color: white !important;
+            transform: translateY(-5px); 
+            border-color: #1a73e8;
+            box-shadow: 0 8px 20px rgba(43, 120, 228, 0.4);
         }
 
         .delete-btn {
@@ -119,6 +125,15 @@
 
         .hint-text { color: #999; font-size: 14px; margin-bottom: 20px; }
 
+        #offlineMsg {
+            display: none;
+            background: #ff9800;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
         #modal {
             display: none; position: fixed; top:0; left:0; width:100%; height:100%;
             background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
@@ -134,6 +149,7 @@
 
 <div class="card">
     <h1>FlashAI</h1>
+    <div id="offlineMsg">โหมดออฟไลน์: กำลังแสดงข้อมูลที่บันทึกไว้ในเครื่อง</div>
     <div class="user-info" id="userInfo">ผู้เล่น: </div>
 
     <h3>เลือกหมวดหมู่ที่จะเล่น</h3>
@@ -141,7 +157,7 @@
     <div id="categoryArea"></div>
 
     <button class="add-circle" onclick="openCreateModal()">+</button>
-    <div class="hint-text">ใช้ลูกศร ⬅️ ⬆️ ➡️ ⬇️ เพื่อเลือก และกด Enter เพื่อเข้าเล่น</div>
+    <div class="hint-text">ใช้ลูกศร ⬅️ ➡️ เพื่อเลือก และกด Enter เพื่อเข้าเล่น</div>
 </div>
 
 <div id="modal">
@@ -149,11 +165,16 @@
 </div>
 
 <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log(err));
+        });
+    }
+
     let fullData = {};
     const playerName = localStorage.getItem("name") || "Guest";
-    
-    // ตั้งค่าหมวดหมู่ที่ห้ามลบ (เฉพาะ animals และ fruits)
     const protectedCategories = ["animals", "fruits", "animal", "fruit"]; 
+    let currentCatIndex = -1; 
 
     document.getElementById("userInfo").innerText = `ผู้เล่น: ${playerName}`;
 
@@ -161,31 +182,37 @@
         try {
             const res = await fetch("/api/all-data");
             fullData = await res.json();
+            localStorage.setItem("offline_categories", JSON.stringify(fullData));
+            document.getElementById("offlineMsg").style.display = "none";
             renderMenu();
         } catch (err) {
-            console.error("Load error:", err);
+            const localData = localStorage.getItem("offline_categories");
+            if (localData) {
+                fullData = JSON.parse(localData);
+                document.getElementById("offlineMsg").style.display = "block";
+                renderMenu();
+            }
         }
     }
 
     function renderMenu() {
         const area = document.getElementById("categoryArea");
         area.innerHTML = "";
+        currentCatIndex = -1; 
         
         Object.keys(fullData).forEach(cat => {
             const wrapper = document.createElement("div");
             wrapper.className = "cat-item-wrapper";
 
             const btn = document.createElement("button");
-            btn.className = "cat-btn";
+            btn.className = "cat-btn"; 
             btn.innerText = cat.toUpperCase();
             btn.onclick = () => startGame(cat);
 
-            // แสดงปุ่มลบ เฉพาะหมวดหมู่ที่ไม่อยู่ในรายการที่ปกป้องไว้
             if (!protectedCategories.includes(cat.toLowerCase())) {
                 const delBtn = document.createElement("button");
                 delBtn.className = "delete-btn";
                 delBtn.innerHTML = "×";
-                delBtn.title = "ลบหมวดหมู่";
                 delBtn.onclick = (e) => {
                     e.stopPropagation();
                     deleteCategory(cat);
@@ -196,8 +223,8 @@
             const tools = document.createElement("div");
             tools.className = "manage-tools";
             tools.innerHTML = `
-                <button class="tool-btn" onclick="viewWords('${cat}')">👁️ ดูคำ</button>
-                <button class="tool-btn" onclick="openAddWordModal('${cat}')">➕ เพิ่ม</button>
+                <button class="tool-btn" onclick="viewWords('${cat}')" tabindex="-1">👁️ ดูคำ</button>
+                <button class="tool-btn" onclick="openAddWordModal('${cat}')" tabindex="-1">➕ เพิ่ม</button>
             `;
 
             wrapper.appendChild(btn);
@@ -206,18 +233,51 @@
         });
     }
 
+    /* 🎮 ระบบคีย์บอร์ด: ⬅️ ➡️ เท่านั้น ล็อคเฉพาะปุ่มสีฟ้า และเปลี่ยนทันที */
+    document.addEventListener("keydown", function(e) {
+        const isModalOpen = document.getElementById("modal").style.display === "flex";
+        if (isModalOpen || e.target.tagName === "INPUT") return;
+
+        // ดึงเฉพาะปุ่มที่มีคลาส .cat-btn
+        const categoryButtons = document.querySelectorAll(".cat-btn");
+        if (categoryButtons.length === 0) return;
+
+        // ⬅️ ➡️ เท่านั้น
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+            e.preventDefault(); 
+            
+            if (e.key === "ArrowRight") {
+                currentCatIndex = (currentCatIndex + 1) % categoryButtons.length;
+            } else {
+                currentCatIndex = (currentCatIndex - 1 + categoryButtons.length) % categoryButtons.length;
+            }
+            
+            updateSelection(categoryButtons);
+        } 
+        
+        else if (e.key === "Enter" && currentCatIndex !== -1) {
+            e.preventDefault();
+            categoryButtons[currentCatIndex].click();
+        }
+    });
+
+    function updateSelection(buttons) {
+        buttons.forEach((btn, index) => {
+            if (index === currentCatIndex) {
+                btn.classList.add("keyboard-selected");
+                btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                btn.classList.remove("keyboard-selected");
+            }
+        });
+    }
+
     async function deleteCategory(cat) {
-        if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่ "${cat.toUpperCase()}"?`)) return;
+        if (!confirm(`ต้องการลบหมวดหมู่ "${cat.toUpperCase()}"?`)) return;
         try {
             const res = await fetch(`/api/category/${cat}`, { method: "DELETE" });
-            if (res.ok) {
-                loadData();
-            } else {
-                alert("ไม่สามารถลบหมวดหมู่นี้ได้");
-            }
-        } catch (err) {
-            console.error("Delete error:", err);
-        }
+            if (res.ok) loadData();
+        } catch (err) { alert("ลบไม่ได้ในโหมดออฟไลน์"); }
     }
 
     function openAddWordModal(cat) {
@@ -227,37 +287,23 @@
         content.innerHTML = `
             <h3 style="margin-top:0;">เพิ่มคำในหมวด ${cat.toUpperCase()}</h3>
             <input type="text" id="newWordInput" class="input-style" placeholder="พิมพ์คำศัพท์..." autocomplete="off">
-            <p id="errorMsg" style="color:red; font-size:13px; display:none; margin: -5px 0 10px 5px;">⚠️ คำนี้มีอยู่ในหมวดนี้แล้ว!</p>
             <button class="btn-save" onclick="saveNewWord('${cat}')">บันทึกคำศัพท์</button>
             <button class="btn-close" onclick="closeModal()">ยกเลิก</button>
         `;
-        const input = document.getElementById("newWordInput");
-        input.focus();
-        input.onkeydown = (e) => { if(e.key === "Enter") saveNewWord(cat); };
+        document.getElementById("newWordInput").focus();
     }
 
     async function saveNewWord(cat) {
-        const input = document.getElementById("newWordInput");
-        const word = input.value.trim();
+        const word = document.getElementById("newWordInput").value.trim();
         if(!word) return;
-
-        const res = await fetch("/api/category/add-word", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ categoryName: cat, word: word })
-        });
-
-        if(res.ok) {
-            closeModal();
-            loadData(); 
-        } else {
-            const err = await res.json();
-            if(err.error && err.error.includes("มีคำศัพท์นี้")) {
-                document.getElementById("errorMsg").style.display = "block";
-            } else {
-                alert(err.error);
-            }
-        }
+        try {
+            const res = await fetch("/api/category/add-word", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ categoryName: cat, word: word })
+            });
+            if(res.ok) { closeModal(); loadData(); }
+        } catch (err) { alert("บันทึกไม่ได้ในโหมดออฟไลน์"); }
     }
 
     function viewWords(cat) {
@@ -266,7 +312,7 @@
         modal.style.display = "flex";
         let chips = fullData[cat].map(w => `<span class="word-chip">${w}</span>`).join('');
         content.innerHTML = `
-            <h3 style="margin-top:0;">คำศัพท์ในหมวด: ${cat.toUpperCase()}</h3>
+            <h3>คำศัพท์ในหมวด: ${cat.toUpperCase()}</h3>
             <div style="margin-bottom:20px; background:#f9f9f9; padding:15px; border-radius:15px; max-height:300px; overflow-y:auto;">${chips}</div>
             <button class="btn-close" onclick="closeModal()">ปิดหน้าต่าง</button>
         `;
@@ -278,10 +324,9 @@
         modal.style.display = "flex";
         content.innerHTML = `
             <h3 style="margin-top:0;">สร้างหมวดหมู่ใหม่</h3>
-            <input type="text" id="newCatName" class="input-style" placeholder="ชื่อหมวดหมู่..." autocomplete="off">
-            <p style="font-size:12px; color:#666; margin-bottom:10px;">กรุณากรอกคำศัพท์ภาษาอังกฤษ 10 คำ:</p>
+            <input type="text" id="newCatName" class="input-style" placeholder="ชื่อหมวดหมู่...">
             <div id="wordInputs" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                ${Array.from({length: 10}, (_, i) => `<input type="text" class="input-style word-input" style="margin-bottom:0;" placeholder="คำที่ ${i+1}" autocomplete="off">`).join('')}
+                ${Array.from({length: 10}, (_, i) => `<input type="text" class="input-style word-input" placeholder="คำที่ ${i+1}">`).join('')}
             </div>
             <button class="btn-save" onclick="saveNewCategory()">บันทึกหมวดหมู่</button>
             <button class="btn-close" onclick="closeModal()">ยกเลิก</button>
@@ -291,29 +336,30 @@
     async function saveNewCategory() {
         const name = document.getElementById("newCatName").value.trim();
         const words = Array.from(document.querySelectorAll(".word-input")).map(i => i.value.trim()).filter(v => v !== "");
-        if(!name || words.length < 10) return alert("กรุณากรอกชื่อหมวดและคำศัพท์ให้ครบ 10 คำ");
-        
-        await fetch("/api/category", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ categoryName: name, items: words })
-        });
-        closeModal();
-        loadData();
+        if(!name || words.length < 10) return alert("กรุณากรอกให้ครบ");
+        try {
+            await fetch("/api/category", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ categoryName: name, items: words })
+            });
+            closeModal(); loadData();
+        } catch (err) { alert("สร้างไม่ได้ในโหมดออฟไลน์"); }
     }
 
     async function startGame(category) {
-        await fetch("/api/start", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: playerName, category })
-        });
+        localStorage.setItem("selectedCategory", category);
+        try {
+            await fetch("/api/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: playerName, category })
+            });
+        } catch (err) {}
         location.href = "game.html";
     }
 
-    function closeModal() { 
-        document.getElementById("modal").style.display = "none"; 
-    }
+    function closeModal() { document.getElementById("modal").style.display = "none"; }
 
     loadData();
 </script>

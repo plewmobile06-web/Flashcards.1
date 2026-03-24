@@ -98,7 +98,7 @@ button.selected{
 </div>
 
 <script>
-// ดึงข้อมูลชื่อจาก localStorage (ตรวจสอบทั้ง 'name' และ 'playerName' เพื่อความแม่นยำ)
+// ดึงข้อมูลชื่อจาก localStorage
 const name = localStorage.getItem("name") || localStorage.getItem("playerName");
 const password = localStorage.getItem("password") || localStorage.getItem("playerPass");
 
@@ -111,10 +111,13 @@ if(!name || !password){
 
 function updateSelection(){
   const buttons = document.querySelectorAll("#options button");
-  buttons.forEach(btn => btn.classList.remove("selected"));
-  if(buttons[selectedIndex]){
-    buttons[selectedIndex].classList.add("selected");
-  }
+  buttons.forEach((btn, index) => {
+    btn.classList.remove("selected");
+    if(index === selectedIndex) {
+      btn.classList.add("selected");
+      // ไม่ต้องใช้ btn.focus() เพื่อไม่ให้เกิดกรอบสีน้ำเงินซ้อนกับ .selected
+    }
+  });
 }
 
 async function loadQuestion(){
@@ -148,11 +151,16 @@ async function loadQuestion(){
     optionsDiv.appendChild(btn);
   });
 
+  // ✅ แก้ไข: รีเซ็ตตำแหน่งเลือกเป็น 0 ทุกครั้งที่ขึ้นข้อใหม่
   selectedIndex = 0;
   updateSelection();
 }
 
 async function submitAnswer(answer, buttonElement){
+  // ป้องกันการกดซ้ำในขณะที่รอเปลี่ยนข้อ
+  const allButtons = document.querySelectorAll("#options button");
+  if (allButtons.length > 0 && allButtons[0].disabled) return;
+
   const res = await fetch(`/api/answer/${name}`,{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -160,7 +168,6 @@ async function submitAnswer(answer, buttonElement){
   });
 
   const data = await res.json();
-  const allButtons = document.querySelectorAll("#options button");
   allButtons.forEach(btn => btn.disabled = true);
 
   if(data.correct){
@@ -183,17 +190,12 @@ async function submitAnswer(answer, buttonElement){
   }, 1000);
 }
 
-// ฟังก์ชันจัดอันดับที่จะทำงานทันทีเมื่อจบเกม
 async function showRanking(finalScore){
   document.body.innerHTML = `
     <div class="ranking-container">
       <h1 style="color: #f44336; margin-top: 30px;">จบเกม!</h1>
       <p style="font-size: 22px;">คะแนนรอบนี้ของคุณ: <strong style="color: #2196F3;">${finalScore}</strong></p>
-      
-      <div id="rankingList">
-        <p>กำลังโหลดการจัดอันดับผู้เล่น...</p>
-      </div>
-      
+      <div id="rankingList"><p>กำลังโหลดการจัดอันดับผู้เล่น...</p></div>
       <br>
       <button onclick="location.href='menu.html'" style="background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 18px; width: 100%; max-width: 400px; font-weight: bold; cursor: pointer;">กลับหน้าเมนู</button>
     </div>
@@ -202,19 +204,15 @@ async function showRanking(finalScore){
   try {
     const res = await fetch("/api/ranking");
     const ranking = await res.json(); 
-
     const rankingList = document.getElementById("rankingList");
     rankingList.innerHTML = `<h3 style="text-align: left; max-width: 400px; margin: 15px auto; color: #555;">🏆 อันดับผู้เล่นสูงสุด</h3>`;
 
     ranking.forEach((player, index) => {
       const box = document.createElement("div");
       box.className = "rank-item";
-      
       const isMe = (player.name === name);
-
-      if (isMe) {
-        box.classList.add("my-rank-box");
-      } else if (index === 0) {
+      if (isMe) box.classList.add("my-rank-box");
+      else if (index === 0) {
         box.style.background = "#ffd700"; 
         box.style.borderColor = "#fbc02d";
       }
@@ -230,17 +228,15 @@ async function showRanking(finalScore){
       `;
       rankingList.appendChild(box);
     });
-
   } catch (error) {
-    console.error("Error:", error);
     document.getElementById("rankingList").innerHTML = "<p>ไม่สามารถโหลดข้อมูลอันดับได้</p>";
   }
 }
 
-/* 🔥 ระบบควบคุมด้วยคีย์บอร์ด */
+/* 🔥 ระบบควบคุมด้วยคีย์บอร์ดที่แก้ไขแล้ว */
 document.addEventListener("keydown", function(e){
   const buttons = document.querySelectorAll("#options button");
-  if(buttons.length === 0) return;
+  if(buttons.length === 0 || buttons[0].disabled) return; // ไม่ทำงานถ้าปุ่มถูกปิดอยู่
 
   if(e.key === "ArrowDown"){
     selectedIndex = (selectedIndex + 1) % buttons.length;
@@ -251,7 +247,11 @@ document.addEventListener("keydown", function(e){
     updateSelection();
   }
   else if(e.key === "Enter"){
-    if(buttons[selectedIndex]) buttons[selectedIndex].click();
+    // ✅ แก้ไข: ดึงค่าจากปุ่มที่เลือกอยู่จริงๆ มาส่งคำตอบ
+    const currentBtn = buttons[selectedIndex];
+    if(currentBtn) {
+      submitAnswer(currentBtn.innerText, currentBtn);
+    }
   }
 });
 

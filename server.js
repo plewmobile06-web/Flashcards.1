@@ -24,7 +24,7 @@ const defaultData = {
   fruit: ["apple","banana","mango","orange","grape","pineapple","watermelon","lemon","kiwi","cherry"]
 };
 
-// ⚡ ระบบ Image Cache เพื่อเก็บ URL รูปที่เคยดึงมาแล้ว ไม่ต้องเรียก API ซ้ำ
+// ⚡ ระบบ Image Cache แบบ Queue: เก็บรายการรูปภาพและตำแหน่งล่าสุดที่แสดง
 const imageCache = {};
 
 function loadJSON(filePath, defaultValue = {}) {
@@ -39,8 +39,10 @@ let data = loadJSON(CATEGORY_FILE, defaultData);
 let highScores = loadJSON(SCORE_FILE, {});
 let users = loadJSON(USER_FILE, {});
 
+// ตรวจสอบไฟล์เริ่มต้น
 if (!fs.existsSync(CATEGORY_FILE)) fs.writeFileSync(CATEGORY_FILE, JSON.stringify(defaultData, null, 2));
 if (!fs.existsSync(USER_FILE)) fs.writeFileSync(USER_FILE, JSON.stringify({}, null, 2));
+if (!fs.existsSync(SCORE_FILE)) fs.writeFileSync(SCORE_FILE, JSON.stringify({}, null, 2));
 
 const players = {};
 
@@ -57,38 +59,67 @@ function randomOptions(correct, arr){
   return [...wrong4, correct].sort(() => 0.5 - Math.random());
 }
 
+// ฟังก์ชันสำหรับสุ่มลำดับ Array (Fisher-Yates Shuffle)
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
 async function generateImage(keyword, category){
-  // 1. ตรวจสอบใน Cache ก่อน ถ้ามีให้ส่งคืนทันที (เร็วที่สุด)
   const cacheKey = `${category}_${keyword}`.toLowerCase();
-  if (imageCache[cacheKey]) {
-    console.log(`🚀 [Cache Hit] ${keyword}`);
-    return imageCache[cacheKey];
+
+  // 1. ตรวจสอบ Cache: ถ้ามีรูปในลิสต์ ให้วนไปรูปถัดไป
+  if (imageCache[cacheKey] && imageCache[cacheKey].urls.length > 0) {
+    const entry = imageCache[cacheKey];
+    entry.currentIndex = (entry.currentIndex + 1) % entry.urls.length;
+    console.log(`🚀 [Cache Hit] ${keyword} - แสดงรูปที่: ${entry.currentIndex + 1}/${entry.urls.length}`);
+    return entry.urls[entry.currentIndex];
   }
 
   try {
-    console.log(`🌐 [Fetching API] ${keyword}`);
-    const query = `"${keyword}" ${category}`;
+    console.log(`🌐 [Fetching API] ค้นหารูปภาพ: ${keyword}`);
+    
     const res = await axios.get("https://pixabay.com/api/", {
       params: {
         key: PIXABAY_KEY,
-        q: query,
+        q: encodeURIComponent(keyword),
         image_type: "photo",
         safesearch: true,
-        per_page: 20
+        per_page: 50, // ดึงมาปริมาณมากเพื่อการกรองที่แม่นยำ
+        orientation: "horizontal"
       },
-      timeout: 5000 // ⏳ ตั้งเวลาคอยแค่ 5 วินาที ถ้า API ช้าให้ Error ทันทีเพื่อไปใช้รูปสำรอง
+      timeout: 5000 
     });
 
     if (res.data.hits && res.data.hits.length > 0) {
-      const filtered = res.data.hits.filter(img => 
-        img.tags.toLowerCase().includes(keyword.toLowerCase())
-      );
-      const pool = filtered.length > 0 ? filtered : res.data.hits;
-      const imageUrl = pool[Math.floor(Math.random() * pool.length)].webformatURL;
+      // 🎯 กรองรูปภาพโดยตรวจสอบ Tags (ต้องมีคำศัพท์นั้นเป๊ะๆ) เพื่อความแม่นยำ
+      let pool = res.data.hits.filter(img => {
+        const tags = img.tags.toLowerCase().split(", ");
+        return tags.includes(keyword.toLowerCase());
+      });
+
+      // ถ้ากรองเข้มงวดแล้วไม่เจอ ให้คลายตัวกรองเป็นการเช็คว่ามีคำนั้นอยู่ใน Tag หรือไม่
+      if (pool.length === 0) {
+        pool = res.data.hits.filter(img => img.tags.toLowerCase().includes(keyword.toLowerCase()));
+      }
       
-      // เก็บลง Cache ไว้ใช้ครั้งต่อไป
-      imageCache[cacheKey] = imageUrl;
-      return imageUrl;
+      // ถ้ายังไม่เจออีก ให้ใช้ผลลัพธ์ทั้งหมดที่ได้จาก API
+      if (pool.length === 0) pool = res.data.hits;
+
+      // สุ่มลำดับรูปภาพที่ได้มา
+      const imageUrls = pool.map(img => img.webformatURL);
+      const randomizedUrls = shuffleArray(imageUrls);
+
+      // บันทึกลง Cache
+      imageCache[cacheKey] = {
+        urls: randomizedUrls,
+        currentIndex: 0
+      };
+
+      return randomizedUrls[0];
     }
     return `https://via.placeholder.com/400?text=${keyword}`;
   } catch (error) {
@@ -126,8 +157,9 @@ app.post("/api/login", (req, res) => {
 });
 
 app.get("/api/categories", (req, res) => res.json(Object.keys(data)));
-app.get("/api/all-data", (req, res) => res.json(data));
+
 app.get("/api/ranking", (req, res) => {
+  highScores = loadJSON(SCORE_FILE, {});
   const rankingArray = Object.keys(highScores).map(name => ({
     name: name,
     score: highScores[name]
@@ -144,64 +176,6 @@ app.post("/api/category", (req, res) => {
   data[name] = items.map(i => i.trim().toLowerCase());
   fs.writeFileSync(CATEGORY_FILE, JSON.stringify(data, null, 2));
   res.json({ message: "เพิ่มหมวดหมู่สำเร็จ", categories: Object.keys(data) });
-});
-
-/* ========================= ADD WORD ROUTE ========================= */
-
-app.post("/api/category/add-word", (req, res) => {
-    const { categoryName, word } = req.body;
-    if (!categoryName || !word) return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน" });
-
-    // 💡 แก้ไขให้ค้นหาหมวดหมู่โดยไม่สนตัวพิมพ์เล็ก-ใหญ่
-    const actualKey = Object.keys(data).find(
-        key => key.toLowerCase() === categoryName.toLowerCase()
-    );
-
-    if (actualKey) {
-        const newWord = word.trim().toLowerCase();
-        if (!data[actualKey].includes(newWord)) {
-            data[actualKey].push(newWord);
-            fs.writeFileSync(CATEGORY_FILE, JSON.stringify(data, null, 2));
-            res.json({ message: "เพิ่มคำศัพท์สำเร็จ", words: data[actualKey] });
-        } else {
-            res.status(400).json({ error: "มีคำศัพท์นี้อยู่แล้ว" });
-        }
-    } else {
-        res.status(404).json({ error: "ไม่พบหมวดหมู่ที่ระบุ" });
-    }
-});
-
-/* ========================= DELETE CATEGORY ROUTE ========================= */
-
-/* ========================= DELETE CATEGORY ROUTE ========================= */
-
-app.delete("/api/category/:name", (req, res) => {
-    // 1. รับชื่อที่ส่งมาจาก Frontend (อาจจะเป็นตัวเล็กหรือใหญ่ก็ได้)
-    const targetName = req.params.name.trim().toLowerCase();
-    
-    // 2. ป้องกันการลบหมวดหมู่เริ่มต้น (ตรวจสอบทั้งเอกพจน์/พหูพจน์ และตัวเล็กทั้งหมด)
-    const protectedCategories = ["animal", "animals", "fruit", "fruits"];
-    if (protectedCategories.includes(targetName)) {
-        return res.status(403).json({ error: "ไม่สามารถลบหมวดหมู่เริ่มต้นได้" });
-    }
-
-    // 3. ค้นหาคีย์จริงๆ ใน Object 'data' (เช่น หา "Occupations" จากคำค้น "occupations")
-    const actualKey = Object.keys(data).find(
-        key => key.toLowerCase() === targetName
-    );
-
-    if (actualKey) {
-        // 4. ลบหมวดหมู่
-        delete data[actualKey];
-        
-        // 5. บันทึกลงไฟล์ categories.json
-        fs.writeFileSync(CATEGORY_FILE, JSON.stringify(data, null, 2));
-        console.log(`🗑️ Deleted category: ${actualKey}`);
-        
-        res.json({ message: "ลบหมวดหมู่สำเร็จ" });
-    } else {
-        res.status(404).json({ error: "ไม่พบหมวดหมู่ที่ต้องการลบ" });
-    }
 });
 
 app.post("/api/start", (req, res) => {
@@ -226,7 +200,6 @@ app.get("/api/question/:name", async (req, res) => {
   const items = data[player.category];
   const correct = randomItem(items);
   
-  // เรียกใช้ฟังก์ชันที่มีระบบ Cache และ Timeout
   const image = await generateImage(correct, player.category);
   const options = randomOptions(correct, items);
 
@@ -248,7 +221,8 @@ app.post("/api/answer/:name", (req, res) => {
     player.wrong++; 
   }
 
-  if (player.score > player.highScore) {
+  highScores = loadJSON(SCORE_FILE, {}); 
+  if (player.score > (highScores[name] || 0)) {
     player.highScore = player.score;
     highScores[name] = player.score;
     fs.writeFileSync(SCORE_FILE, JSON.stringify(highScores, null, 2));
@@ -262,7 +236,7 @@ app.post("/api/answer/:name", (req, res) => {
     wrong: player.wrong, 
     gameOver, 
     finalScore: player.score, 
-    highScore: player.highScore 
+    highScore: highScores[name] || player.score 
   });
 });
 
