@@ -1,142 +1,133 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<title>FlashAI - Select Category</title>
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
-    
-    body {
-        margin: 0;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-family: 'Kanit', sans-serif;
-        background: #f0f2f5;
-    }
+    <meta charset="UTF-8">
+    <title>FlashAI - Select Category</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+        
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Kanit', sans-serif;
+            background: #f0f2f5;
+        }
 
-    .card {
-        background: white;
-        padding: 50px 40px;
-        width: 100%;
-        max-width: 650px;
-        text-align: center;
-        border-radius: 30px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-    }
+        .card {
+            background: white;
+            padding: 50px 40px;
+            width: 100%;
+            max-width: 650px;
+            text-align: center;
+            border-radius: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        }
 
-    h1 { color: #2b78e4; font-size: 42px; margin-bottom: 5px; }
-    .user-info { color: #888; margin-bottom: 35px; font-size: 18px; }
+        h1 { color: #2b78e4; font-size: 42px; margin-bottom: 5px; }
+        .user-info { color: #888; margin-bottom: 35px; font-size: 18px; }
+        h3 { font-size: 24px; margin-bottom: 25px; color: #333; }
 
-    h3 { font-size: 24px; margin-bottom: 25px; color: #333; }
+        #categoryArea {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 35px;
+        }
 
-    #categoryArea {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        flex-wrap: wrap;
-        margin-bottom: 35px;
-    }
+        .cat-item-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
 
-    .cat-item-wrapper {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        position: relative;
-    }
+        .cat-btn {
+            padding: 12px 35px;
+            border: 2px solid transparent; 
+            border-radius: 50px;
+            background: #e8f0fe;
+            color: #2b78e4;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            min-width: 120px;
+        }
 
-    .cat-btn {
-        padding: 12px 35px;
-        border: 2px solid transparent; /* เตรียมพื้นที่ไว้สำหรับตอน focus */
-        border-radius: 50px;
-        background: #e8f0fe;
-        color: #2b78e4;
-        font-size: 18px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: 0.3s;
-        min-width: 120px;
-    }
+        .cat-btn:hover, .cat-btn:focus { 
+            background: #d2e3fc; 
+            transform: translateY(-2px); 
+            border-color: #2b78e4;
+            outline: none;
+        }
 
-    /* ✨ เพิ่ม Style เมื่อใช้ปุ่มลูกศรเลือกปุ่ม */
-    .cat-btn:focus {
-        outline: none;
-        border-color: #2b78e4;
-        background: #d2e3fc;
-        transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(43, 120, 228, 0.2);
-    }
+        .delete-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: 0.2s;
+            z-index: 5;
+        }
+        .delete-btn:hover { background: #cc0000; transform: scale(1.1); }
 
-    .cat-btn:hover { background: #d2e3fc; transform: translateY(-2px); }
+        .manage-tools {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .tool-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .tool-btn:hover { color: #2b78e4; }
 
-    .delete-btn {
-        position: absolute;
-        top: -10px;
-        right: -10px;
-        background: #ff4d4d;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 24px;
-        height: 24px;
-        font-size: 12px;
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        transition: 0.2s;
-        z-index: 5;
-    }
-    .delete-btn:hover { background: #cc0000; transform: scale(1.1); }
+        .add-circle {
+            width: 65px; height: 65px;
+            background: #34a853; color: white;
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 40px; margin: 0 auto 10px;
+            cursor: pointer; border: none; transition: 0.3s;
+            box-shadow: 0 5px 15px rgba(52, 168, 83, 0.3);
+        }
+        .add-circle:hover { transform: scale(1.1); background: #2d9249; }
 
-    .manage-tools {
-        display: flex;
-        gap: 12px;
-    }
-    
-    .tool-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 13px;
-        color: #666;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 3px;
-    }
-    .tool-btn:hover { color: #2b78e4; }
+        .hint-text { color: #999; font-size: 14px; margin-bottom: 20px; }
 
-    .add-circle {
-        width: 65px; height: 65px;
-        background: #34a853; color: white;
-        border-radius: 50%;
-        display: flex; justify-content: center; align-items: center;
-        font-size: 40px; margin: 0 auto 10px;
-        cursor: pointer; border: none; transition: 0.3s;
-        box-shadow: 0 5px 15px rgba(52, 168, 83, 0.3);
-    }
-    .add-circle:hover { transform: scale(1.1); background: #2d9249; }
-
-    .hint-text { color: #999; font-size: 14px; margin-bottom: 20px; }
-
-    #modal {
-        display: none; position: fixed; top:0; left:0; width:100%; height:100%;
-        background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
-    }
-    .modal-content { background: white; padding: 30px; border-radius: 25px; width: 400px; max-height: 85vh; overflow-y: auto; text-align: left; }
-    
-    .input-style { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; font-family: 'Kanit'; }
-    .btn-save { background: #34a853; color: white; border: none; padding: 12px; width: 100%; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-    .btn-close { background: #f0f2f5; color: #555; border: none; padding: 10px; width: 100%; border-radius: 10px; cursor: pointer; margin-top: 8px; }
-
-    .word-chip {
-        display: inline-block; background: #e8f0fe; padding: 6px 14px; border-radius: 20px; margin: 4px; font-size: 14px; color: #2b78e4;
-    }
-</style>
+        /* Modal Styles */
+        #modal {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-content { background: white; padding: 30px; border-radius: 25px; width: 400px; max-height: 85vh; overflow-y: auto; text-align: left; }
+        .input-style { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; font-family: 'Kanit'; }
+        .btn-save { background: #34a853; color: white; border: none; padding: 12px; width: 100%; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-close { background: #f0f2f5; color: #555; border: none; padding: 10px; width: 100%; border-radius: 10px; cursor: pointer; margin-top: 8px; }
+        .word-chip { display: inline-block; background: #e8f0fe; padding: 6px 14px; border-radius: 20px; margin: 4px; font-size: 14px; color: #2b78e4; }
+    </style>
 </head>
 <body>
 
@@ -157,205 +148,172 @@
 </div>
 
 <script>
-let fullData = {};
-const playerName = localStorage.getItem("name") || "Guest";
-const protectedCategories = ["fruits", "animals", "ผลไม้", "สัตว์", "fruit", "animal"];
-let isShiftPressed = false; 
+    let fullData = {};
+    const playerName = localStorage.getItem("name") || "Guest";
+    const protectedCategories = ["fruits", "animals", "occupations", "fruit", "animal"]; 
 
-document.getElementById("userInfo").innerText = `ผู้เล่น: ${playerName}`;
+    document.getElementById("userInfo").innerText = `ผู้เล่น: ${playerName}`;
 
-/* ✨ ระบบ Keyboard Navigation (ลูกศรเลื่อนปุ่ม) */
-document.addEventListener("keydown", function(e) {
-    // ถ้า Modal เปิดอยู่ ไม่ต้องรันระบบเลื่อนปุ่มเมนูหลัก
-    if (document.getElementById("modal").style.display === "flex") return;
-
-    const buttons = Array.from(document.querySelectorAll(".cat-btn"));
-    if (buttons.length === 0) return;
-
-    const active = document.activeElement;
-    let index = buttons.indexOf(active);
-
-    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-        e.preventDefault();
-        let next = (index + 1) % buttons.length;
-        buttons[next].focus();
-    } 
-    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-        e.preventDefault();
-        let prev = (index - 1 + buttons.length) % buttons.length;
-        buttons[prev].focus();
-    }
-});
-
-/* ✨ ระบบ Auto-Capitalize ดักจับปุ่ม Shift */
-document.addEventListener('keydown', (e) => { if (e.key === 'Shift') isShiftPressed = true; });
-document.addEventListener('keyup', (e) => { if (e.key === 'Shift') isShiftPressed = false; });
-
-function handleAutoCapitalize(e) {
-    if (!e.target.classList.contains('input-style') && !e.target.classList.contains('word-input')) return;
-    let input = e.target;
-    let val = input.value;
-    let pos = input.selectionStart;
-    if (val.length > 0) {
-        const isFirstChar = (pos === 1);
-        const isAfterSpace = (val[pos - 2] === ' ');
-        if (isFirstChar || isAfterSpace) {
-            let char = val[pos - 1];
-            let transformedChar = isShiftPressed ? char.toLowerCase() : char.toUpperCase();
-            input.value = val.slice(0, pos - 1) + transformedChar + val.slice(pos);
-            input.setSelectionRange(pos, pos);
+    async function loadData() {
+        try {
+            const res = await fetch("/api/all-data");
+            fullData = await res.json();
+            renderMenu();
+        } catch (err) {
+            console.error("Load error:", err);
         }
     }
-}
-document.addEventListener('input', handleAutoCapitalize);
 
-async function loadData() {
-    const res = await fetch("/api/all-data");
-    fullData = await res.json();
-    renderMenu();
+    function renderMenu() {
+        const area = document.getElementById("categoryArea");
+        area.innerHTML = "";
+        
+        Object.keys(fullData).forEach(cat => {
+            const wrapper = document.createElement("div");
+            wrapper.className = "cat-item-wrapper";
 
-    // ✨ โฟกัสปุ่มแรกทันทีที่โหลดเสร็จ
-    setTimeout(() => {
-        const firstBtn = document.querySelector(".cat-btn");
-        if(firstBtn) firstBtn.focus();
-    }, 100);
-}
+            const btn = document.createElement("button");
+            btn.className = "cat-btn";
+            btn.innerText = cat.toUpperCase();
+            btn.onclick = () => startGame(cat);
 
-function renderMenu() {
-    const area = document.getElementById("categoryArea");
-    area.innerHTML = "";
-    
-    Object.keys(fullData).forEach(cat => {
-        const wrapper = document.createElement("div");
-        wrapper.className = "cat-item-wrapper";
+            // ปุ่มลบ
+            if (!protectedCategories.includes(cat.toLowerCase())) {
+                const delBtn = document.createElement("button");
+                delBtn.className = "delete-btn";
+                delBtn.innerHTML = "×";
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteCategory(cat);
+                };
+                wrapper.appendChild(delBtn);
+            }
 
-        const btn = document.createElement("button");
-        btn.className = "cat-btn";
-        btn.innerText = cat.toUpperCase();
-        btn.setAttribute("tabindex", "0"); // ให้สามารถ focus ได้
-        btn.onclick = () => startGame(cat);
+            const tools = document.createElement("div");
+            tools.className = "manage-tools";
+            tools.innerHTML = `
+                <button class="tool-btn" onclick="viewWords('${cat}')">👁️ ดูคำ</button>
+                <button class="tool-btn" onclick="openAddWordModal('${cat}')">➕ เพิ่ม</button>
+            `;
 
-        if (!protectedCategories.includes(cat.toLowerCase())) {
-            const delBtn = document.createElement("button");
-            delBtn.className = "delete-btn";
-            delBtn.innerHTML = "×";
-            delBtn.tabIndex = -1; // ไม่ให้ลูกศรกระโดดไปโดนปุ่มกากบาท
-            delBtn.onclick = (e) => {
-                e.stopPropagation();
-                deleteCategory(cat);
-            };
-            wrapper.appendChild(delBtn);
-        }
+            wrapper.appendChild(btn);
+            wrapper.appendChild(tools);
+            area.appendChild(wrapper);
+        });
+    }
 
-        const tools = document.createElement("div");
-        tools.className = "manage-tools";
-        tools.innerHTML = `
-            <button class="tool-btn" tabindex="-1" onclick="viewWords('${cat}')">👁️ ดูคำ</button>
-            <button class="tool-btn" tabindex="-1" onclick="openAddWordModal('${cat}')">➕ เพิ่ม</button>
+    // --- ส่วนการเพิ่มคำศัพท์ (จุดที่แก้ไข) ---
+
+    function openAddWordModal(cat) {
+        const modal = document.getElementById("modal");
+        const content = document.getElementById("modalContent");
+        modal.style.display = "flex";
+        content.innerHTML = `
+            <h3 style="margin-top:0;">เพิ่มคำในหมวด ${cat.toUpperCase()}</h3>
+            <input type="text" id="newWordInput" class="input-style" placeholder="พิมพ์คำศัพท์ภาษาอังกฤษ..." autocomplete="off">
+            <p id="errorMsg" style="color:red; font-size:13px; display:none; margin: -5px 0 10px 5px;">⚠️ คำนี้มีอยู่ในหมวดนี้แล้ว!</p>
+            <button class="btn-save" onclick="saveNewWord('${cat}')">บันทึกคำศัพท์</button>
+            <button class="btn-close" onclick="closeModal()">ยกเลิก</button>
         `;
+        
+        const input = document.getElementById("newWordInput");
+        input.focus();
+        // กด Enter เพื่อบันทึก
+        input.onkeydown = (e) => { if(e.key === "Enter") saveNewWord(cat); };
+    }
 
-        wrapper.appendChild(btn);
-        wrapper.appendChild(tools);
-        area.appendChild(wrapper);
-    });
-}
+    async function saveNewWord(cat) {
+        const input = document.getElementById("newWordInput");
+        const word = input.value.trim();
+        if(!word) return;
 
-async function deleteCategory(cat) {
-    if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่ "${cat.toUpperCase()}"?`)) return;
-    try {
+        try {
+            const res = await fetch("/api/category/add-word", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ categoryName: cat, word: word })
+            });
+
+            const result = await res.json();
+            if(res.ok) {
+                closeModal();
+                loadData(); 
+            } else {
+                if(result.error.includes("มีคำศัพท์นี้")) {
+                    document.getElementById("errorMsg").style.display = "block";
+                } else {
+                    alert(result.error);
+                }
+            }
+        } catch (err) {
+            alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+        }
+    }
+
+    // --- ฟังก์ชันอื่นๆ ---
+
+    function viewWords(cat) {
+        const modal = document.getElementById("modal");
+        const content = document.getElementById("modalContent");
+        modal.style.display = "flex";
+        let chips = fullData[cat].map(w => `<span class="word-chip">${w}</span>`).join('');
+        content.innerHTML = `
+            <h3 style="margin-top:0;">คำศัพท์ในหมวด: ${cat.toUpperCase()}</h3>
+            <div style="margin-bottom:20px; background:#f9f9f9; padding:15px; border-radius:15px; max-height:300px; overflow-y:auto;">${chips}</div>
+            <button class="btn-close" onclick="closeModal()">ปิดหน้าต่าง</button>
+        `;
+    }
+
+    async function deleteCategory(cat) {
+        if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่ "${cat.toUpperCase()}"?`)) return;
         const res = await fetch(`/api/category/${cat}`, { method: "DELETE" });
         if (res.ok) loadData();
-        else alert("ไม่สามารถลบหมวดหมู่นี้ได้");
-    } catch (err) { console.error("Delete error:", err); }
-}
-
-function viewWords(cat) {
-    const modal = document.getElementById("modal");
-    const content = document.getElementById("modalContent");
-    modal.style.display = "flex";
-    let chips = fullData[cat].map(w => `<span class="word-chip">${w}</span>`).join('');
-    content.innerHTML = `
-        <h3 style="margin-top:0;">คำศัพท์ในหมวด: ${cat.toUpperCase()}</h3>
-        <div style="margin-bottom:20px; background:#f9f9f9; padding:15px; border-radius:15px;">${chips}</div>
-        <button class="btn-close" onclick="closeModal()">ปิดหน้าต่าง</button>
-    `;
-}
-
-function openAddWordModal(cat) {
-    const modal = document.getElementById("modal");
-    const content = document.getElementById("modalContent");
-    modal.style.display = "flex";
-    content.innerHTML = `
-        <h3 style="margin-top:0;">เพิ่มคำในหมวด ${cat.toUpperCase()}</h3>
-        <input type="text" id="newWordInput" class="input-style" placeholder="พิมพ์คำศัพท์ภาษาอังกฤษ..." autocomplete="off">
-        <p id="errorMsg" style="color:red; font-size:13px; display:none; margin: -5px 0 10px 5px;">⚠️ คำนี้มีอยู่ในหมวดนี้แล้ว!</p>
-        <button class="btn-save" onclick="saveNewWord('${cat}')">บันทึกคำศัพท์</button>
-        <button class="btn-close" onclick="closeModal()">ยกเลิก</button>
-    `;
-    setTimeout(() => document.getElementById("newWordInput").focus(), 100);
-}
-
-async function saveNewWord(cat) {
-    const word = document.getElementById("newWordInput").value.trim();
-    if(!word) return;
-    if(fullData[cat].map(w => w.toLowerCase()).includes(word.toLowerCase())) {
-        document.getElementById("errorMsg").style.display = "block";
-        return;
     }
-    const res = await fetch("/api/category/add-word", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categoryName: cat, word: word })
-    });
-    if(res.ok) { closeModal(); loadData(); }
-}
 
-function openCreateModal() {
-    const modal = document.getElementById("modal");
-    const content = document.getElementById("modalContent");
-    modal.style.display = "flex";
-    content.innerHTML = `
-        <h3 style="margin-top:0;">สร้างหมวดหมู่ใหม่</h3>
-        <input type="text" id="newCatName" class="input-style" placeholder="ชื่อหมวดหมู่ (เช่น Jobs, Colors)" autocomplete="off">
-        <p style="font-size:12px; color:#666; margin-bottom:10px;">กรุณากรอกคำศัพท์ให้ครบ 10 คำ:</p>
-        <div id="wordInputs" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            ${Array.from({length: 10}, (_, i) => `<input type="text" class="input-style word-input" style="margin-bottom:0;" placeholder="คำที่ ${i+1}" autocomplete="off">`).join('')}
-        </div>
-        <button class="btn-save" onclick="saveNewCategory()">บันทึกหมวดหมู่</button>
-        <button class="btn-close" onclick="closeModal()">ยกเลิก</button>
-    `;
-}
+    function openCreateModal() {
+        const modal = document.getElementById("modal");
+        const content = document.getElementById("modalContent");
+        modal.style.display = "flex";
+        content.innerHTML = `
+            <h3 style="margin-top:0;">สร้างหมวดหมู่ใหม่</h3>
+            <input type="text" id="newCatName" class="input-style" placeholder="ชื่อหมวดหมู่..." autocomplete="off">
+            <p style="font-size:12px; color:#666; margin-bottom:10px;">กรุณากรอกคำศัพท์ภาษาอังกฤษ 10 คำ:</p>
+            <div id="wordInputs" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                ${Array.from({length: 10}, (_, i) => `<input type="text" class="input-style word-input" style="margin-bottom:0;" placeholder="คำที่ ${i+1}" autocomplete="off">`).join('')}
+            </div>
+            <button class="btn-save" onclick="saveNewCategory()">บันทึกหมวดหมู่</button>
+            <button class="btn-close" onclick="closeModal()">ยกเลิก</button>
+        `;
+    }
 
-async function saveNewCategory() {
-    const name = document.getElementById("newCatName").value.trim();
-    const words = Array.from(document.querySelectorAll(".word-input")).map(i => i.value.trim()).filter(v => v !== "");
-    if(!name || words.length < 10) return alert("กรุณากรอกชื่อหมวดและคำศัพท์ให้ครบ 10 คำ");
-    await fetch("/api/category", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categoryName: name, items: words })
-    });
-    closeModal();
+    async function saveNewCategory() {
+        const name = document.getElementById("newCatName").value.trim();
+        const words = Array.from(document.querySelectorAll(".word-input")).map(i => i.value.trim()).filter(v => v !== "");
+        if(!name || words.length < 10) return alert("กรุณากรอกชื่อหมวดและคำศัพท์ให้ครบ 10 คำ");
+        
+        await fetch("/api/category", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ categoryName: name, items: words })
+        });
+        closeModal();
+        loadData();
+    }
+
+    async function startGame(category) {
+        await fetch("/api/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: playerName, category })
+        });
+        location.href = "game.html";
+    }
+
+    function closeModal() { 
+        document.getElementById("modal").style.display = "none"; 
+    }
+
     loadData();
-}
-
-async function startGame(category) {
-    await fetch("/api/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: playerName, category })
-    });
-    location.href = "game.html";
-}
-
-function closeModal() { 
-    document.getElementById("modal").style.display = "none"; 
-    // เมื่อปิด Modal ให้กลับไปโฟกัสปุ่มแรกของเมนู
-    const firstBtn = document.querySelector(".cat-btn");
-    if(firstBtn) firstBtn.focus();
-}
-
-loadData();
 </script>
 </body>
 </html>

@@ -146,6 +146,51 @@ app.post("/api/category", (req, res) => {
   res.json({ message: "เพิ่มหมวดหมู่สำเร็จ", categories: Object.keys(data) });
 });
 
+/* ========================= ADD WORD ROUTE ========================= */
+
+app.post("/api/category/add-word", (req, res) => {
+    const { categoryName, word } = req.body;
+    if (!categoryName || !word) return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน" });
+
+    // 💡 แก้ไขให้ค้นหาหมวดหมู่โดยไม่สนตัวพิมพ์เล็ก-ใหญ่
+    const actualKey = Object.keys(data).find(
+        key => key.toLowerCase() === categoryName.toLowerCase()
+    );
+
+    if (actualKey) {
+        const newWord = word.trim().toLowerCase();
+        if (!data[actualKey].includes(newWord)) {
+            data[actualKey].push(newWord);
+            fs.writeFileSync(CATEGORY_FILE, JSON.stringify(data, null, 2));
+            res.json({ message: "เพิ่มคำศัพท์สำเร็จ", words: data[actualKey] });
+        } else {
+            res.status(400).json({ error: "มีคำศัพท์นี้อยู่แล้ว" });
+        }
+    } else {
+        res.status(404).json({ error: "ไม่พบหมวดหมู่ที่ระบุ" });
+    }
+});
+
+/* ========================= DELETE CATEGORY ROUTE ========================= */
+
+app.delete("/api/category/:name", (req, res) => {
+    const catName = req.params.name.toLowerCase();
+    
+    // ป้องกันการลบหมวดหมู่พื้นฐาน (Optional)
+    const protectedCategories = ["animal", "fruit"];
+    if (protectedCategories.includes(catName)) {
+        return res.status(403).json({ error: "ไม่สามารถลบหมวดหมู่เริ่มต้นได้" });
+    }
+
+    if (data[catName]) {
+        delete data[catName];
+        fs.writeFileSync(CATEGORY_FILE, JSON.stringify(data, null, 2));
+        res.json({ message: "ลบหมวดหมู่สำเร็จ" });
+    } else {
+        res.status(404).json({ error: "ไม่พบหมวดหมู่" });
+    }
+});
+
 app.post("/api/start", (req, res) => {
   const { name, category } = req.body;
   if (!data[category]) return res.status(400).json({ error: "Invalid category" });
