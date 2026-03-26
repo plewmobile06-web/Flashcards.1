@@ -40,7 +40,6 @@ function saveJSON(filePath, data) {
 let categories = loadJSON(CATEGORY_FILE, defaultData);
 let highScores = loadJSON(SCORE_FILE, {});
 
-// สร้างไฟล์เริ่มต้นถ้ายังไม่มี
 if (!fs.existsSync(CATEGORY_FILE)) saveJSON(CATEGORY_FILE, defaultData);
 
 const players = {};
@@ -81,13 +80,21 @@ async function generateImage(keyword, category) {
 
 /* ========================= ROUTES ========================= */
 
-// 1. ดึงข้อมูลหมวดหมู่ทั้งหมด (ส่งทั้ง Object ไปให้ Frontend ใช้)
 app.get("/api/all-data", (req, res) => {
   categories = loadJSON(CATEGORY_FILE, defaultData);
   res.json(categories);
 });
 
-// 2. เพิ่มหมวดหมู่ใหม่
+// --- เพิ่ม Route สำหรับ Ranking เพื่อแก้ปัญหา "ไม่สามารถโหลดข้อมูลอันดับได้" ---
+app.get("/api/ranking", (req, res) => {
+  highScores = loadJSON(SCORE_FILE, {});
+  const rankingArray = Object.keys(highScores).map(name => ({
+    name: name,
+    score: highScores[name]
+  })).sort((a, b) => b.score - a.score);
+  res.json(rankingArray.slice(0, 10)); 
+});
+
 app.post("/api/category", (req, res) => {
   const { categoryName, items } = req.body;
   if (!categoryName || !items || items.length < 3) {
@@ -99,7 +106,6 @@ app.post("/api/category", (req, res) => {
   res.json({ message: "เพิ่มสำเร็จ" });
 });
 
-// 3. เพิ่มคำศัพท์ในหมวดหมู่เดิม
 app.post("/api/category/add-word", (req, res) => {
   const { categoryName, word } = req.body;
   const name = categoryName.toLowerCase();
@@ -111,7 +117,6 @@ app.post("/api/category/add-word", (req, res) => {
   res.status(404).json({ error: "ไม่พบหมวดหมู่" });
 });
 
-// 4. ลบหมวดหมู่
 app.delete("/api/category/:name", (req, res) => {
   const name = req.params.name.toLowerCase();
   const protectedCats = ["animals", "fruits"];
@@ -125,11 +130,11 @@ app.delete("/api/category/:name", (req, res) => {
   res.status(404).json({ error: "ไม่พบหมวดหมู่" });
 });
 
-// 5. เริ่มเกม
 app.post("/api/start", (req, res) => {
   const { name, category } = req.body;
   if (!categories[category]) return res.status(400).json({ error: "หมวดหมู่ไม่ถูกต้อง" });
 
+  highScores = loadJSON(SCORE_FILE, {});
   players[name] = {
     score: 0,
     wrong: 0,
@@ -139,7 +144,6 @@ app.post("/api/start", (req, res) => {
   res.json({ message: "เริ่มเกม" });
 });
 
-// 6. ดึงคำถาม
 app.get("/api/question/:name", async (req, res) => {
   const { name } = req.params;
   const player = players[name];
@@ -147,10 +151,8 @@ app.get("/api/question/:name", async (req, res) => {
 
   const items = categories[player.category];
   const correct = items[Math.floor(Math.random() * items.length)];
-  
   const image = await generateImage(correct, player.category);
   
-  // สุ่มตัวเลือก 4 ตัว (รวมคำตอบที่ถูก)
   let options = items.filter(x => x !== correct)
                      .sort(() => 0.5 - Math.random())
                      .slice(0, 3);
@@ -161,7 +163,6 @@ app.get("/api/question/:name", async (req, res) => {
   res.json({ image, options, score: player.score, wrong: player.wrong });
 });
 
-// 7. ตอบคำถาม
 app.post("/api/answer/:name", (req, res) => {
   const { name } = req.params;
   const { answer } = req.body;
@@ -176,17 +177,21 @@ app.post("/api/answer/:name", (req, res) => {
     player.wrong++;
   }
 
+  highScores = loadJSON(SCORE_FILE, {});
   if (player.score > (highScores[name] || 0)) {
     highScores[name] = player.score;
     saveJSON(SCORE_FILE, highScores);
   }
 
+  // ส่ง JSON ที่มีทั้ง score และ finalScore เพื่อกันปัญหา undefined
   res.json({
     correct: isCorrect,
     correctAnswer: player.currentAnswer,
     score: player.score,
+    finalScore: player.score, 
     wrong: player.wrong,
-    gameOver: player.wrong >= 5
+    gameOver: player.wrong >= 5,
+    highScore: highScores[name] || player.score
   });
 });
 
