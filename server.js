@@ -17,229 +17,179 @@ const PIXABAY_KEY = "54726244-0fc3b5ea4b3d82698fc5045b0";
 
 const CATEGORY_FILE = "categories.json";
 const SCORE_FILE = "scores.json";
-const USER_FILE = "users.json"; 
 
 const defaultData = {
-  animal: ["cat","dog","elephant","tiger","lion","horse","cow","pig","rabbit","monkey"],
-  fruit: ["apple","banana","mango","orange","grape","pineapple","watermelon","lemon","kiwi","cherry"]
+  animals: ["cat", "dog", "elephant", "tiger", "lion", "horse", "cow", "pig", "rabbit", "monkey"],
+  fruits: ["apple", "banana", "mango", "orange", "grape", "pineapple", "watermelon", "lemon", "kiwi", "cherry"]
 };
 
-// ⚡ ระบบ Image Cache แบบ Queue: เก็บรายการรูปภาพและตำแหน่งล่าสุดที่แสดง
-const imageCache = {};
-
 function loadJSON(filePath, defaultValue = {}) {
-  if (fs.existsSync(filePath)) {
-    const content = fs.readFileSync(filePath, "utf8");
-    return content.trim() ? JSON.parse(content) : defaultValue;
-  }
+  try {
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, "utf8");
+      return content.trim() ? JSON.parse(content) : defaultValue;
+    }
+  } catch (e) { console.error("Error loading JSON:", e); }
   return defaultValue;
 }
 
-let data = loadJSON(CATEGORY_FILE, defaultData);
-let highScores = loadJSON(SCORE_FILE, {});
-let users = loadJSON(USER_FILE, {});
+function saveJSON(filePath, data) {
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
 
-// ตรวจสอบไฟล์เริ่มต้น
-if (!fs.existsSync(CATEGORY_FILE)) fs.writeFileSync(CATEGORY_FILE, JSON.stringify(defaultData, null, 2));
-if (!fs.existsSync(USER_FILE)) fs.writeFileSync(USER_FILE, JSON.stringify({}, null, 2));
-if (!fs.existsSync(SCORE_FILE)) fs.writeFileSync(SCORE_FILE, JSON.stringify({}, null, 2));
+let categories = loadJSON(CATEGORY_FILE, defaultData);
+let highScores = loadJSON(SCORE_FILE, {});
+
+// สร้างไฟล์เริ่มต้นถ้ายังไม่มี
+if (!fs.existsSync(CATEGORY_FILE)) saveJSON(CATEGORY_FILE, defaultData);
 
 const players = {};
+const imageCache = {};
 
-/* ========================= FUNCTIONS ========================= */
+/* ========================= HELPER FUNCTIONS ========================= */
 
-function randomItem(arr){
-  return arr[Math.floor(Math.random()*arr.length)];
-}
-
-function randomOptions(correct, arr){
-  const wrong = arr.filter(x => x !== correct);
-  const shuffled = wrong.sort(() => 0.5 - Math.random());
-  const wrong4 = shuffled.slice(0, 4);
-  return [...wrong4, correct].sort(() => 0.5 - Math.random());
-}
-
-// ฟังก์ชันสำหรับสุ่มลำดับ Array (Fisher-Yates Shuffle)
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
-
-async function generateImage(keyword, category){
+async function generateImage(keyword, category) {
   const cacheKey = `${category}_${keyword}`.toLowerCase();
-
-  // 1. ตรวจสอบ Cache: ถ้ามีรูปในลิสต์ ให้วนไปรูปถัดไป
-  if (imageCache[cacheKey] && imageCache[cacheKey].urls.length > 0) {
+  if (imageCache[cacheKey]) {
     const entry = imageCache[cacheKey];
     entry.currentIndex = (entry.currentIndex + 1) % entry.urls.length;
-    console.log(`🚀 [Cache Hit] ${keyword} - แสดงรูปที่: ${entry.currentIndex + 1}/${entry.urls.length}`);
     return entry.urls[entry.currentIndex];
   }
 
   try {
-    console.log(`🌐 [Fetching API] ค้นหารูปภาพ: ${keyword}`);
-    
     const res = await axios.get("https://pixabay.com/api/", {
       params: {
         key: PIXABAY_KEY,
         q: encodeURIComponent(keyword),
         image_type: "photo",
         safesearch: true,
-        per_page: 50, // ดึงมาปริมาณมากเพื่อการกรองที่แม่นยำ
-        orientation: "horizontal"
+        per_page: 20
       },
       timeout: 5000 
     });
 
     if (res.data.hits && res.data.hits.length > 0) {
-      // 🎯 กรองรูปภาพโดยตรวจสอบ Tags (ต้องมีคำศัพท์นั้นเป๊ะๆ) เพื่อความแม่นยำ
-      let pool = res.data.hits.filter(img => {
-        const tags = img.tags.toLowerCase().split(", ");
-        return tags.includes(keyword.toLowerCase());
-      });
-
-      // ถ้ากรองเข้มงวดแล้วไม่เจอ ให้คลายตัวกรองเป็นการเช็คว่ามีคำนั้นอยู่ใน Tag หรือไม่
-      if (pool.length === 0) {
-        pool = res.data.hits.filter(img => img.tags.toLowerCase().includes(keyword.toLowerCase()));
-      }
-      
-      // ถ้ายังไม่เจออีก ให้ใช้ผลลัพธ์ทั้งหมดที่ได้จาก API
-      if (pool.length === 0) pool = res.data.hits;
-
-      // สุ่มลำดับรูปภาพที่ได้มา
-      const imageUrls = pool.map(img => img.webformatURL);
-      const randomizedUrls = shuffleArray(imageUrls);
-
-      // บันทึกลง Cache
-      imageCache[cacheKey] = {
-        urls: randomizedUrls,
-        currentIndex: 0
-      };
-
-      return randomizedUrls[0];
+      const urls = res.data.hits.map(img => img.webformatURL);
+      imageCache[cacheKey] = { urls, currentIndex: 0 };
+      return urls[0];
     }
-    return `https://via.placeholder.com/400?text=${keyword}`;
   } catch (error) {
-    console.error(`❌ Error fetching image for ${keyword}:`, error.message);
-    return `https://via.placeholder.com/400?text=${keyword}`;
+    console.error(`❌ Pixabay Error for ${keyword}:`, error.message);
   }
+  return `https://via.placeholder.com/400?text=${keyword}`;
 }
 
 /* ========================= ROUTES ========================= */
 
-app.post("/api/register", (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: "กรุณากรอกข้อมูลให้ครบ" });
-
-  const name = username.trim();
-  users = loadJSON(USER_FILE, {});
-
-  if (users[name]) return res.status(400).json({ error: "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว" });
-
-  users[name] = { password: password };
-  fs.writeFileSync(USER_FILE, JSON.stringify(users, null, 2));
-  res.json({ message: "ลงทะเบียนสำเร็จ" });
+// 1. ดึงข้อมูลหมวดหมู่ทั้งหมด (ส่งทั้ง Object ไปให้ Frontend ใช้)
+app.get("/api/all-data", (req, res) => {
+  categories = loadJSON(CATEGORY_FILE, defaultData);
+  res.json(categories);
 });
 
-app.post("/api/login", (req, res) => {
-  const { username, password } = req.body;
-  users = loadJSON(USER_FILE, {}); 
-
-  const user = users[username];
-  if (user && user.password === password) {
-    res.json({ message: "เข้าสู่ระบบสำเร็จ", username });
-  } else {
-    res.status(401).json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
-  }
-});
-
-app.get("/api/categories", (req, res) => res.json(Object.keys(data)));
-
-app.get("/api/ranking", (req, res) => {
-  highScores = loadJSON(SCORE_FILE, {});
-  const rankingArray = Object.keys(highScores).map(name => ({
-    name: name,
-    score: highScores[name]
-  })).sort((a, b) => b.score - a.score);
-  res.json(rankingArray.slice(0, 10));
-});
-
+// 2. เพิ่มหมวดหมู่ใหม่
 app.post("/api/category", (req, res) => {
   const { categoryName, items } = req.body;
-  if (!categoryName || !items || items.length < 10) {
-    return res.status(400).json({ error: "ต้องมีชื่อหมวดหมู่และคำศัพท์อย่างน้อย 10 คำ" });
+  if (!categoryName || !items || items.length < 3) {
+    return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน" });
   }
   const name = categoryName.trim().toLowerCase();
-  data[name] = items.map(i => i.trim().toLowerCase());
-  fs.writeFileSync(CATEGORY_FILE, JSON.stringify(data, null, 2));
-  res.json({ message: "เพิ่มหมวดหมู่สำเร็จ", categories: Object.keys(data) });
+  categories[name] = items.map(i => i.trim().toLowerCase());
+  saveJSON(CATEGORY_FILE, categories);
+  res.json({ message: "เพิ่มสำเร็จ" });
 });
 
+// 3. เพิ่มคำศัพท์ในหมวดหมู่เดิม
+app.post("/api/category/add-word", (req, res) => {
+  const { categoryName, word } = req.body;
+  const name = categoryName.toLowerCase();
+  if (categories[name]) {
+    categories[name].push(word.trim().toLowerCase());
+    saveJSON(CATEGORY_FILE, categories);
+    return res.json({ message: "เพิ่มคำศัพท์สำเร็จ" });
+  }
+  res.status(404).json({ error: "ไม่พบหมวดหมู่" });
+});
+
+// 4. ลบหมวดหมู่
+app.delete("/api/category/:name", (req, res) => {
+  const name = req.params.name.toLowerCase();
+  const protectedCats = ["animals", "fruits"];
+  if (protectedCats.includes(name)) return res.status(403).json({ error: "ห้ามลบหมวดหมู่หลัก" });
+  
+  if (categories[name]) {
+    delete categories[name];
+    saveJSON(CATEGORY_FILE, categories);
+    return res.json({ message: "ลบสำเร็จ" });
+  }
+  res.status(404).json({ error: "ไม่พบหมวดหมู่" });
+});
+
+// 5. เริ่มเกม
 app.post("/api/start", (req, res) => {
   const { name, category } = req.body;
-  if (!data[category]) return res.status(400).json({ error: "Invalid category" });
+  if (!categories[category]) return res.status(400).json({ error: "หมวดหมู่ไม่ถูกต้อง" });
 
-  highScores = loadJSON(SCORE_FILE, {});
   players[name] = {
     score: 0,
     wrong: 0,
     category,
     highScore: highScores[name] || 0
   };
-  res.json({ message: "Game started" });
+  res.json({ message: "เริ่มเกม" });
 });
 
+// 6. ดึงคำถาม
 app.get("/api/question/:name", async (req, res) => {
   const { name } = req.params;
   const player = players[name];
-  if (!player) return res.status(400).json({ error: "Player not found" });
+  if (!player) return res.status(400).json({ error: "ไม่พบผู้เล่น" });
 
-  const items = data[player.category];
-  const correct = randomItem(items);
+  const items = categories[player.category];
+  const correct = items[Math.floor(Math.random() * items.length)];
   
   const image = await generateImage(correct, player.category);
-  const options = randomOptions(correct, items);
+  
+  // สุ่มตัวเลือก 4 ตัว (รวมคำตอบที่ถูก)
+  let options = items.filter(x => x !== correct)
+                     .sort(() => 0.5 - Math.random())
+                     .slice(0, 3);
+  options.push(correct);
+  options.sort(() => 0.5 - Math.random());
 
   player.currentAnswer = correct;
-  res.json({ image, options, score: player.score, wrong: player.wrong, highScore: player.highScore });
+  res.json({ image, options, score: player.score, wrong: player.wrong });
 });
 
+// 7. ตอบคำถาม
 app.post("/api/answer/:name", (req, res) => {
   const { name } = req.params;
   const { answer } = req.body;
   const player = players[name];
 
-  if (!player) return res.status(400).json({ error: "Player not found" });
+  if (!player) return res.status(400).json({ error: "ไม่พบผู้เล่น" });
 
-  let correct = (answer === player.currentAnswer);
-  if (correct) { 
-    player.score++; 
-  } else { 
-    player.wrong++; 
+  const isCorrect = (answer.toLowerCase() === player.currentAnswer.toLowerCase());
+  if (isCorrect) {
+    player.score++;
+  } else {
+    player.wrong++;
   }
 
-  highScores = loadJSON(SCORE_FILE, {}); 
   if (player.score > (highScores[name] || 0)) {
-    player.highScore = player.score;
     highScores[name] = player.score;
-    fs.writeFileSync(SCORE_FILE, JSON.stringify(highScores, null, 2));
+    saveJSON(SCORE_FILE, highScores);
   }
 
-  const gameOver = player.wrong >= 5;
-  res.json({ 
-    correct, 
-    correctAnswer: player.currentAnswer, 
-    score: player.score, 
-    wrong: player.wrong, 
-    gameOver, 
-    finalScore: player.score, 
-    highScore: highScores[name] || player.score 
+  res.json({
+    correct: isCorrect,
+    correctAnswer: player.currentAnswer,
+    score: player.score,
+    wrong: player.wrong,
+    gameOver: player.wrong >= 5
   });
 });
 
 app.listen(3000, () => {
-  console.log("✅ Server running on http://localhost:3000");
+  console.log("🚀 FlashAI Server ready at http://localhost:3000");
 });
